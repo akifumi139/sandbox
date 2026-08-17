@@ -6,4 +6,44 @@
     "files.encoding": "utf8",
     "files.insertFinalNewline": true,
     "files.trimTrailingWhitespace": true,
+    "laravel-pint.enable": true,
+    "laravel-pint.enableDebugLogs": true,
+    "laravel-pint.configPath": "../pint.json",
+    "[php]": {
+        "editor.defaultFormatter": "open-southeners.laravel-pint"
+    },
+    "[blade]": {
+        "editor.defaultFormatter": "shufo.vscode-blade-formatter",
+        "editor.autoClosingBrackets": "always"
+    },
+    "cSpell.words": [],
+    "rest-client.decodeEscapedUnicodeCharacters": true,
+    "gitmoji.onlyUseCustomEmoji": true,
+    "gitmoji.addCustomEmoji": [
+        {
+            "emoji": "docs:",
+            "description": "📝ドキュメントの追加・修正"
+        },
+        {
+            "emoji": "test:",
+            "description": "🧪テストコードの追加・修正（ただし、他の接頭辞をつけるべきコードを含む場合は、その接頭辞を優先する）"
+        },
+        {
+            "emoji": "chore:",
+            "description": "🧹ライブラリの更新・ビルド環境の変更"
+        }
+    ],
+    "cSpell.ignorePaths": [
+        "**/package.json",
+        "**/package-lock.json",
+        "**/node_modules/**",
+        "**/vscode-extension/**",
+        "**/.git/objects/**",
+        ".vscode/*",
+        ".devcontainer/*",
+        "pubspec.lock",
+        "pint.json",
+        ".gitignore",
+    ],
+    "bladeFormatter.format.componentPrefix": "x-,livewire,flux"
 }
