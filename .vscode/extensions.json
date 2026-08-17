@@ -1,0 +1,8 @@
+{
+  "recommendations": [
+    "laravel.vscode-laravel",
+    "damms005.devdb",
+    "open-southeners.laravel-pint",
+    "bradlc.vscode-tailwindcss"
+  ]
+}
