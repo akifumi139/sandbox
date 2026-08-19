@@ -1,0 +1,11 @@
+{
+    "name": "Souko",
+    "alias": "souko",
+    "description": "",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\Souko\\Providers\\SoukoServiceProvider"
+    ],
+    "files": []
+}
