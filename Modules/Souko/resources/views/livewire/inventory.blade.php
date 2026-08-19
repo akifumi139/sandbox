@@ -2,6 +2,13 @@
 
         <x-souko::header />
 
+        @if (session('message'))
+            <div
+                class="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-200">
+                {{ session('message') }}
+            </div>
+        @endif
+
         <!-- Title & Header Actions -->
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
@@ -9,17 +16,97 @@
                 <flux:subheading>登録されている工具を管理します</flux:subheading>
             </div>
 
-            <flux:button variant="primary" icon="plus">
-                工具を登録
-            </flux:button>
+            <flux:modal.trigger name="tool-create-modal">
+                <flux:button variant="primary" icon="plus">
+                    工具を登録
+                </flux:button>
+            </flux:modal.trigger>
         </div>
+
+        <flux:modal name="tool-create-modal" class="md:w-[40rem]">
+            <form wire:submit.prevent="saveTool" class="space-y-6">
+                <div>
+                    <flux:heading size="lg">工具を登録</flux:heading>
+                    <flux:text class="mt-2">新しい工具の管理情報を入力してください。</flux:text>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <flux:input wire:model="form.management_number" label="管理番号" placeholder="T-900001" />
+                    <flux:input wire:model="form.name" label="工具名" placeholder="インパクトドライバー" />
+                    <flux:input wire:model="form.model" label="型番" placeholder="TD172DRGX" />
+                    <flux:input wire:model="form.manufacturer" label="メーカー" placeholder="Makita" />
+                    <div class="md:col-span-2">
+                        <flux:select wire:model="form.status" label="状態">
+                            <flux:select.option value="available">貸出可能</flux:select.option>
+                            <flux:select.option value="rented">貸出中</flux:select.option>
+                            <flux:select.option value="maintenance">修理中</flux:select.option>
+                            <flux:select.option value="disposed">廃棄</flux:select.option>
+                        </flux:select>
+                    </div>
+                </div>
+
+                <div class="flex justify-end gap-2">
+                    <flux:modal.close>
+                        <flux:button type="button" variant="ghost">キャンセル</flux:button>
+                    </flux:modal.close>
+
+                    <flux:button type="submit" variant="primary" icon="plus">登録する</flux:button>
+                </div>
+            </form>
+        </flux:modal>
+
+        <flux:modal wire:model="showQrModal" class="md:w-96">
+            <div x-data="{
+                managementNumber: @entangle('qrManagementNumber'),
+                renderQr() {
+                    const el = this.$refs.qrCanvas;
+                    el.innerHTML = '';
+            
+                    if (!this.managementNumber) {
+                        return;
+                    }
+            
+                    QRCode.toCanvas(el, this.managementNumber, {
+                        width: 220,
+                        margin: 1,
+                        color: {
+                            dark: '#111827',
+                            light: '#ffffff'
+                        }
+                    }, (error) => {
+                        if (error) {
+                            console.error(error);
+                        }
+                    });
+                }
+            }" x-init="renderQr()"
+                x-effect="if ($wire.showQrModal) { $nextTick(() => renderQr()); }">
+                <div class="space-y-5 text-center">
+                    <div>
+                        <flux:heading size="lg">QRコード表示</flux:heading>
+                        <flux:text class="mt-2">この工具の管理番号をQRで表示します。</flux:text>
+                    </div>
+
+                    <div
+                        class="flex justify-center rounded-2xl border border-zinc-200 bg-white p-3 dark:border-zinc-700 dark:bg-zinc-950">
+                        <canvas x-ref="qrCanvas" class="max-w-full"></canvas>
+                    </div>
+
+                    <p class="font-mono text-sm text-zinc-600 dark:text-zinc-300" x-text="managementNumber"></p>
+
+                    <flux:button type="button" variant="primary" class="w-full" x-on:click="$wire.showQrModal = false">
+                        閉じる
+                    </flux:button>
+                </div>
+            </div>
+        </flux:modal>
 
         <!-- Summary KPI Cards -->
         <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <flux:card class="space-y-1">
                 <flux:subheading size="sm">登録工具</flux:subheading>
                 <div class="flex items-baseline gap-1">
-                    <span class="text-3xl font-bold tracking-tight">{{ $totalTools }}</span>
+                    <span class="text-3xl font-bold tracking-tight">{{ $this->tools->total() }}</span>
                     <span class="text-xs text-zinc-500 dark:text-zinc-400">点</span>
                 </div>
             </flux:card>
@@ -74,12 +161,12 @@
             <div class="p-4 sm:px-6 border-b border-zinc-200 dark:border-zinc-700 flex items-center justify-between">
                 <div>
                     <flux:heading size="lg">工具一覧</flux:heading>
-                    <flux:subheading>{{ $totalTools }}件</flux:subheading>
+                    <flux:subheading>{{ $this->tools->total() }}件</flux:subheading>
                 </div>
 
-                <flux:button variant="ghost" size="sm" icon="arrow-down-tray">
+                {{-- <flux:button variant="ghost" size="sm" icon="arrow-down-tray">
                     CSV出力
-                </flux:button>
+                </flux:button> --}}
             </div>
 
             <!-- Table (Desktop & Mobile Responsive) -->
@@ -93,7 +180,7 @@
                 </flux:table.columns>
 
                 <flux:table.rows>
-                    @forelse ($tools as $tool)
+                    @forelse ($this->tools as $tool)
                         <flux:table.row wire:key="tool-{{ $tool->id }}">
                             <flux:table.cell class="font-mono text-xs">{{ $tool->management_number }}</flux:table.cell>
                             <flux:table.cell class="font-medium">{{ $tool->name }}</flux:table.cell>
@@ -126,9 +213,15 @@
                                         inset="top bottom" />
                                     <flux:menu>
                                         <flux:menu.item icon="pencil-square">編集</flux:menu.item>
-                                        <flux:menu.item icon="arrow-right-start-on-rectangle">貸し出し</flux:menu.item>
+                                        <flux:menu.item wire:click="openQrModal('{{ $tool->management_number }}')"
+                                            icon="qr-code">
+                                            QRコード表示
+                                        </flux:menu.item>
                                         <flux:menu.separator />
-                                        <flux:menu.item variant="danger" icon="trash">削除</flux:menu.item>
+                                        <flux:menu.item wire:click="deleteTool({{ $tool->id }})" variant="danger"
+                                            icon="trash">
+                                            削除
+                                        </flux:menu.item>
                                     </flux:menu>
                                 </flux:dropdown>
                             </flux:table.cell>
@@ -145,7 +238,9 @@
 
             <!-- Pagination Container -->
             <div class="p-4 border-t border-zinc-200 dark:border-zinc-700">
-                {{-- <flux:pagination :paginator="$tools" /> --}}
+                {{ $this->tools->links() }}
             </div>
         </flux:card>
     </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.0.0/build/qrcode.min.js"></script>
