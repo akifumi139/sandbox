@@ -11,6 +11,8 @@ class SoukoDatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // $this->call([]);
+        $this->call([
+            ToolSeeder::class,
+        ]);
     }
 }

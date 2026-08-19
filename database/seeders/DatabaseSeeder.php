@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Modules\Souko\Database\Seeders\SoukoDatabaseSeeder;
 
 class DatabaseSeeder extends Seeder
 {
@@ -40,6 +41,8 @@ class DatabaseSeeder extends Seeder
             'name' => 'TestE(一般ユーザー)',
             'email' => 'e@example.com',
         ]);
+
+        $this->call(SoukoDatabaseSeeder::class);
 
     }
 }

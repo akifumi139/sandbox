@@ -1,8 +1,15 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use Modules\Souko\Http\Controllers\SoukoController;
+use Modules\Souko\Livewire\BorrowHistory;
+use Modules\Souko\Livewire\Inventory;
+use Modules\Souko\Livewire\QrScanner;
 
-// Route::middleware(['auth', 'verified'])->group(function () {
-//     Route::resource('souko', SoukoController::class)->names('souko');
-// });
+Route::middleware(['auth', 'verified'])
+    ->prefix('souko')
+    ->name('souko.')
+    ->group(function () {
+        Route::get('qr-scanner', QrScanner::class)->name('qr-scanner');
+        Route::get('inventory', Inventory::class)->name('inventory');
+        Route::get('borrow-history', BorrowHistory::class)->name('borrow-history');
+    });
