@@ -64,6 +64,7 @@ class BorrowHistory extends Component
         $log = ToolLog::create([
             'tool_id' => $toolId,
             'action_type' => 'return',
+            'user_id' => auth()->id(),
             'user_name' => $userName,
             'logged_at' => now(),
         ]);

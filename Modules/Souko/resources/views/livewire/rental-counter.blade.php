@@ -2,25 +2,37 @@
 
     <x-souko::header />
 
-    <!-- Page Header -->
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
             <flux:heading size="xl" level="1">貸し出しカウンター</flux:heading>
             <flux:subheading>QRコードをスキャンして工具を貸し出します</flux:subheading>
         </div>
 
-        <div class="text-sm text-zinc-500 dark:text-zinc-400 font-medium">
-            {{ now()->format('Y年n月j日') }}
+        <div class="flex items-center gap-3">
+            <div class="inline-flex rounded-xl border border-zinc-200 bg-zinc-100 p-1">
+                <a href="{{ route('souko.rental-counter') }}">
+                    <button type="button"
+                        class="rounded-lg bg-white px-3 py-1.5 text-sm font-medium text-zinc-900 shadow-sm ring-1 ring-zinc-200">
+                        貸し出し
+                    </button>
+                </a>
+                <a href="{{ route('souko.return-counter') }}">
+                    <button type="button"
+                        class="rounded-lg px-3 py-1.5 text-sm font-medium text-zinc-500 transition hover:text-zinc-900">
+                        返却
+                    </button>
+                </a>
+            </div>
         </div>
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div class="lg:col-span-2 space-y-6">
             <flux:card x-data="qrScanner">
-                <div class="flex items-center justify-between pb-4 border-b border-zinc-200 dark:border-zinc-700">
+                <div class="flex items-center justify-between pb-4 border-b border-zinc-200">
                     <div class="flex items-center gap-3">
-                        <div class="p-2 bg-zinc-100 dark:bg-zinc-800 rounded-lg">
-                            <flux:icon name="qr-code" class="w-5 h-5 text-zinc-600 dark:text-zinc-300" />
+                        <div class="p-2 bg-zinc-100 ">
+                            <flux:icon name="qr-code" class="w-5 h-5 text-zinc-600" />
                         </div>
                         <div>
                             <flux:heading size="lg">QRスキャナー</flux:heading>
@@ -112,21 +124,13 @@
         <!-- Right Column: Checkout Panel -->
         <aside>
             <flux:card class="lg:sticky lg:top-6 space-y-5">
-                <flux:heading class="border-b border-zinc-200 dark:border-zinc-700 pb-3">
-                    貸し出し内容
-                </flux:heading>
-
-                <div class="space-y-3 text-sm">
-                    <div class="flex justify-between">
-                        <span class="text-zinc-500 dark:text-zinc-400">工具</span>
-                        <span class="font-medium">{{ count($cart) }}点</span>
-                    </div>
-                </div>
-
-                <flux:separator />
-
                 <div class="space-y-4">
-                    <flux:input wire:model="borrower_name" label="使用者" placeholder="氏名を入力" />
+                    <flux:select label="貸し出し利用者" wire:model="userId">
+                        @foreach ($this->users as $user)
+                            <flux:select.option value="{{ $user->id }}">{{ $user->name }}</flux:select.option>
+                        @endforeach
+                    </flux:select>
+                    <flux:input wire:model="borrower_name" label="使用者" placeholder="未入力の場合は、貸し出し利用者の名前が使用されます" />
 
                     <flux:button variant="primary" class="w-full mt-2" wire:click="checkout" :disabled="count($cart) === 0">
                         持ち出す

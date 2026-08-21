@@ -54,8 +54,7 @@
                 <flux:table.column>日時</flux:table.column>
                 <flux:table.column>種別</flux:table.column>
                 <flux:table.column>管理番号 / 工具名</flux:table.column>
-                <flux:table.column>使用者</flux:table.column>
-                <flux:table.column></flux:table.column>
+                <flux:table.column>管理者 / 使用者</flux:table.column>
             </flux:table.columns>
 
             <flux:table.rows>
@@ -85,19 +84,8 @@
                                 {{ $log->tool->name ?? '削除された工具' }}
                             </div>
                         </flux:table.cell>
-
                         <flux:table.cell class="font-medium">
-                            {{ $log->user_name }}
-                        </flux:table.cell>
-
-                        <flux:table.cell>
-                            @if ($log->action_type === 'borrow')
-                                <flux:button wire:click="returnTool({{ $log->tool_id }}, '{{ $log->user_name }}')"
-                                    wire:confirm="「{{ $log->tool->name ?? 'この工具' }}」の返却処理を実行しますか？" variant="subtle"
-                                    size="sm" icon="arrow-left-end-on-rectangle" inset="top bottom">
-                                    返却処理
-                                </flux:button>
-                            @endif
+                            {{ $log->user->name ?? '-' }} / {{ $log->user_name }}
                         </flux:table.cell>
                         </flux:row>
                     @empty

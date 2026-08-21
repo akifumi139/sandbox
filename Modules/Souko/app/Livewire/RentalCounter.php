@@ -2,28 +2,44 @@
 
 namespace Modules\Souko\Livewire;
 
+use App\Models\User;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use Livewire\Attributes\Computed;
 use Livewire\Component;
 use Modules\Souko\Models\Tool;
 use Modules\Souko\Models\ToolLog;
 
-class QrScanner extends Component
+class RentalCounter extends Component
 {
     public bool $showQrScanner = false;
 
     public string $scannerMessage = 'QRコードを読み取って工具を追加してください。';
 
-    public function render()
-    {
-        return view('souko::livewire.qr-scanner');
-    }
-
     public string $search = '';
 
-    public string $borrower_name = '';
+    public int $userId;
+
+    public string $borrowerName = '';
 
     public array $cart = [];
+
+    public function render()
+    {
+        return view('souko::livewire.rental-counter');
+    }
+
+    public function mount(): void
+    {
+        $this->userId = Auth::id();
+    }
+
+    #[Computed]
+    public function users()
+    {
+        return User::get();
+    }
 
     public function removeItem(int $index): void
     {
@@ -62,9 +78,7 @@ class QrScanner extends Component
 
         $cartIndex = $this->findCartIndexByCode($tool->management_number);
 
-        if ($cartIndex !== null) {
-            $this->cart[$cartIndex]['quantity'] = (int) ($this->cart[$cartIndex]['quantity'] ?? 1) + 1;
-        } else {
+        if ($cartIndex === null) {
             $this->cart[] = $this->toolToCartItem($tool);
         }
 
@@ -96,7 +110,6 @@ class QrScanner extends Component
     public function checkout(): void
     {
         $this->validate([
-            'borrower_name' => ['required', 'string', 'min:1'],
             'cart' => ['required', 'array', 'min:1'],
         ]);
 
@@ -118,7 +131,9 @@ class QrScanner extends Component
                 ]);
             }
         }
-
+        if ($this->borrowerName === '') {
+            $this->borrowerName = User::query()->find($this->userId)?->name ?? '';
+        }
         DB::transaction(function () {
             foreach ($this->cart as $item) {
                 $tool = Tool::query()->find($item['id'] ?? null);
@@ -132,9 +147,10 @@ class QrScanner extends Component
                 ToolLog::query()->create([
                     'tool_id' => $tool->getKey(),
                     'action_type' => 'borrow',
-                    'user_name' => trim($this->borrower_name),
+                    'user_id' => $this->userId,
+                    'user_name' => trim($this->borrowerName),
                     'logged_at' => now(),
-                    'note' => 'QRスキャナーによる貸し出し',
+                    'note' => null,
                 ]);
 
                 $tool->update(['status' => 'rented']);
@@ -142,7 +158,7 @@ class QrScanner extends Component
         });
 
         session()->flash('status', '貸し出し処理が完了しました。');
-        $this->reset(['cart', 'borrower_name']);
+        $this->reset(['cart', 'borrowerName']);
         $this->scannerMessage = '貸し出し処理が完了しました。';
     }
 }
