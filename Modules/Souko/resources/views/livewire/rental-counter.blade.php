@@ -8,22 +8,10 @@
             <flux:subheading>QRコードをスキャンして工具を貸し出します</flux:subheading>
         </div>
 
-        <div class="flex items-center gap-3">
-            <div class="inline-flex rounded-xl border border-zinc-200 bg-zinc-100 p-1">
-                <a href="{{ route('souko.rental-counter') }}">
-                    <button type="button"
-                        class="rounded-lg bg-white px-3 py-1.5 text-sm font-medium text-zinc-900 shadow-sm ring-1 ring-zinc-200">
-                        貸出
-                    </button>
-                </a>
-                <a href="{{ route('souko.return-counter') }}">
-                    <button type="button"
-                        class="rounded-lg px-3 py-1.5 text-sm font-medium text-zinc-500 transition hover:text-zinc-900">
-                        返却
-                    </button>
-                </a>
-            </div>
-        </div>
+        <flux:tabs variant="segmented">
+            <flux:tab name="board" selected href="{{ route('souko.rental-counter') }}">貸出</flux:tab>
+            <flux:tab name="list" href="{{ route('souko.return-counter') }}">返却</flux:tab>
+        </flux:tabs>
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">

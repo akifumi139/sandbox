@@ -1,26 +1,16 @@
-<div class="max-w-7xl mx-auto space-y-6">
+<div class="max-w-7xl mx-auto md:space-y-6">
     <x-souko::header />
 
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div class="hidden md:block">
             <flux:heading size="xl" level="1">返却カウンター</flux:heading>
             <flux:subheading>現在貸し出されている工具を確認して、返却を完了します</flux:subheading>
         </div>
 
-        <div class="inline-flex rounded-xl border border-zinc-200 bg-zinc-100 p-1">
-            <a href="{{ route('souko.rental-counter') }}">
-                <button type="button"
-                    class="rounded-lg px-3 py-1.5 text-sm font-medium text-zinc-500 transition hover:text-zinc-900">
-                    貸し出し
-                </button>
-            </a>
-            <a href="{{ route('souko.return-counter') }}">
-                <button type="button"
-                    class="rounded-lg bg-white px-3 py-1.5 text-sm font-medium text-zinc-900 shadow-sm ring-1 ring-zinc-200">
-                    返却
-                </button>
-            </a>
-        </div>
+        <flux:tabs variant="segmented">
+            <flux:tab name="board" href="{{ route('souko.rental-counter') }}">貸出</flux:tab>
+            <flux:tab name="list" selected href="{{ route('souko.return-counter') }}">返却</flux:tab>
+        </flux:tabs>
     </div>
 
     @if (session()->has('message'))
@@ -28,13 +18,6 @@
             {{ session('message') }}
         </flux:badge>
     @endif
-
-    <flux:card>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <flux:input wire:model.live.debounce.300ms="search" label="検索" placeholder="工具名・管理番号・使用者"
-                icon="magnifying-glass" />
-        </div>
-    </flux:card>
 
     <flux:card class="p-0 overflow-hidden">
         <div class="p-4 sm:px-6 border-b border-zinc-200 flex items-center justify-between gap-3">
