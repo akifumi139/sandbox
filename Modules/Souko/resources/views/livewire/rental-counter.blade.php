@@ -1,9 +1,9 @@
-<div class="max-w-7xl mx-auto space-y-6">
+<div class="max-w-7xl mx-auto md:space-y-6">
 
     <x-souko::header />
 
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
+        <div class="hidden md:block">
             <flux:heading size="xl" level="1">貸し出しカウンター</flux:heading>
             <flux:subheading>QRコードをスキャンして工具を貸し出します</flux:subheading>
         </div>
@@ -13,7 +13,7 @@
                 <a href="{{ route('souko.rental-counter') }}">
                     <button type="button"
                         class="rounded-lg bg-white px-3 py-1.5 text-sm font-medium text-zinc-900 shadow-sm ring-1 ring-zinc-200">
-                        貸し出し
+                        貸出
                     </button>
                 </a>
                 <a href="{{ route('souko.return-counter') }}">
@@ -39,9 +39,6 @@
                             <flux:subheading x-text="statusText"></flux:subheading>
                         </div>
                     </div>
-                    <flux:button x-bind:variant="isScanning ? 'subtle' : 'filled'" x-on:click="toggleScanner">
-                        <span x-text="isScanning ? 'カメラを停止' : 'カメラを起動'"></span>
-                    </flux:button>
                 </div>
 
                 @if ($scannerMessage !== '')
@@ -130,7 +127,7 @@
                             <flux:select.option value="{{ $user->id }}">{{ $user->name }}</flux:select.option>
                         @endforeach
                     </flux:select>
-                    <flux:input wire:model="borrower_name" label="使用者" placeholder="未入力の場合は、貸し出し利用者の名前が使用されます" />
+                    <flux:input wire:model="borrowerName" label="使用者" placeholder="未入力の場合は、貸し出し利用者の名前が使用されます" />
 
                     <flux:button variant="primary" class="w-full mt-2" wire:click="checkout" :disabled="count($cart) === 0">
                         持ち出す
@@ -151,18 +148,13 @@
 <script>
     document.addEventListener('alpine:init', () => {
         Alpine.data('qrScanner', () => ({
-            isScanning: false,
             scanner: null,
             lastResult: null,
             lastResultTime: 0,
-            statusText: 'カメラ起動ボタンを押してください',
+            statusText: 'カメラ起動中...',
 
-            async toggleScanner() {
-                if (this.isScanning) {
-                    await this.stopScanning();
-                } else {
-                    await this.startScanning();
-                }
+            init() {
+                this.startScanning();
             },
 
             async startScanning() {
@@ -190,48 +182,39 @@
                             qrbox: {
                                 width: 220,
                                 height: 220
-                            },
+                            }
                         },
                         (decodedText) => {
-                            this.handleScan(decodedText);
+                            const now = Date.now();
+                            if (decodedText === this.lastResult && now - this
+                                .lastResultTime < 1500) {
+                                return;
+                            }
+
+                            this.lastResult = decodedText;
+                            this.lastResultTime = now;
+                            this.statusText = `読み取り成功: ${decodedText}`;
+
+                            this.$wire.call('addToolByQrCode', decodedText);
                         },
                         () => {}
                     );
-                    this.isScanning = true;
-                    this.statusText = 'QRコードを枠内にかざしてください';
+
+                    this.statusText = 'QRコードにかざしてください';
                 } catch (error) {
                     console.error(error);
                     this.statusText = 'カメラの起動に失敗しました（権限を確認してください）';
-                    await this.stopScanning();
+                    this.scanner = null;
                 }
-            },
-
-            async stopScanning() {
-                if (this.scanner) {
-                    try {
-                        await this.scanner.stop();
-                        await this.scanner.clear();
-                    } catch (error) {
-                        // エラー無視
-                    }
-                }
-                this.scanner = null;
-                this.isScanning = false;
-                this.statusText = 'カメラは停止しています';
-            },
-
-            handleScan(decodedText) {
-                const now = Date.now();
-                if (decodedText === this.lastResult && now - this.lastResultTime < 1500) {
-                    return;
-                }
-
-                this.lastResult = decodedText;
-                this.lastResultTime = now;
-                this.statusText = `読み取り成功: ${decodedText}`;
-
-                this.$wire.call('addToolByQrCode', decodedText);
             },
         }));
+
+        const scannerRoot = document.querySelector('[x-data="qrScanner"]');
+        if (scannerRoot) {
+            const alpineInstance = Alpine.$data(scannerRoot);
+            if (alpineInstance && typeof alpineInstance.startScanning === 'function') {
+                alpineInstance.startScanning();
+            }
+        }
     });
 </script>

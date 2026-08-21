@@ -15,7 +15,7 @@ class RentalCounter extends Component
 {
     public bool $showQrScanner = false;
 
-    public string $scannerMessage = 'QRコードを読み取って工具を追加してください。';
+    public string $scannerMessage = '工具を追加してください。';
 
     public string $search = '';
 
