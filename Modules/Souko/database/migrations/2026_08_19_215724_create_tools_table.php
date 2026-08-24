@@ -14,7 +14,7 @@ return new class extends Migration
             $table->string('name')->comment('工具名');
             $table->string('model')->nullable()->comment('型番');
             $table->string('manufacturer')->nullable()->comment('メーカー');
-            $table->string('status')->default('available')->comment('工具の状態');
+            $table->string('status')->default('available')->comment('工具の状態: available (利用可能), rented (貸出中), maintenance (点検中), lost (紛失) など');
             $table->text('note')->nullable()->comment('備考');
 
             $table->timestamps();

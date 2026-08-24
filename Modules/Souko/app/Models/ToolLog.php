@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 #[Table('souko__tool_logs')]
-#[Fillable(['tool_id', 'action_type', 'user_id', 'user_name', 'logged_at', 'note'])]
+#[Fillable(['tool_id', 'user_id', 'user_name', 'borrow_at', 'return_at', 'note'])]
 class ToolLog extends Model
 {
     use HasFactory;
@@ -27,10 +27,17 @@ class ToolLog extends Model
         return $this->belongsTo(User::class, 'user_id');
     }
 
-    protected function loggedAt(): Attribute
+    protected function borrowAt(): Attribute
     {
         return Attribute::make(
             get: fn (string $value) => CarbonImmutable::parse($value),
+        );
+    }
+
+    protected function returnAt(): Attribute
+    {
+        return Attribute::make(
+            get: fn (?string $value) => $value === null ? null : CarbonImmutable::parse($value),
         );
     }
 }

@@ -21,10 +21,10 @@ it('shows borrowed tools in the return list', function (): void {
 
     ToolLog::query()->create([
         'tool_id' => $tool->id,
-        'action_type' => 'borrow',
         'user_id' => $user->id,
         'user_name' => $user->name,
-        'logged_at' => now()->subMinutes(30),
+        'borrow_at' => now()->subMinutes(30),
+        'return_at' => null,
     ]);
 
     Livewire::test(ReturnCounter::class)
@@ -46,12 +46,12 @@ it('marks a rented tool as available when returned', function (): void {
         'status' => 'rented',
     ]);
 
-    ToolLog::query()->create([
+    $toolLog = ToolLog::query()->create([
         'tool_id' => $tool->id,
-        'action_type' => 'borrow',
         'user_id' => $user->id,
         'user_name' => $user->name,
-        'logged_at' => now()->subMinutes(15),
+        'borrow_at' => now()->subMinutes(15),
+        'return_at' => null,
     ]);
 
     Livewire::test(ReturnCounter::class)
@@ -59,7 +59,8 @@ it('marks a rented tool as available when returned', function (): void {
         ->assertSee('返却を完了しました。');
 
     expect($tool->fresh()->status)->toBe('available')
-        ->and(ToolLog::query()->where('tool_id', $tool->id)->where('action_type', 'return')->exists())->toBeTrue();
+        ->and($toolLog->fresh()->return_at)->not->toBeNull()
+        ->and(ToolLog::query()->where('tool_id', $tool->id)->count())->toBe(1);
 });
 
 it('shows only the latest active borrow record for each tool', function (): void {
@@ -75,27 +76,26 @@ it('shows only the latest active borrow record for each tool', function (): void
 
     ToolLog::query()->create([
         'tool_id' => $tool->id,
-        'action_type' => 'borrow',
         'user_id' => $user->id,
         'user_name' => $user->name,
-        'logged_at' => now()->subDays(10),
+        'borrow_at' => now()->subDays(10),
+        'return_at' => null,
     ]);
 
     ToolLog::query()->create([
         'tool_id' => $tool->id,
-        'action_type' => 'borrow',
         'user_id' => $user->id,
         'user_name' => $user->name,
-        'logged_at' => now()->subDay(),
+        'borrow_at' => now()->subDay(),
+        'return_at' => null,
     ]);
 
     $component = Livewire::test(ReturnCounter::class);
 
-    $component->assertSee('重複履歴工具')
-        ->assertDontSee('重複履歴工具', false);
+    $component->assertSee('重複履歴工具');
 
-    expect(ToolLog::query()->where('tool_id', $tool->id)->where('action_type', 'borrow')->count())->toBe(2)
-        ->and($component->viewData('borrowedTools')->total())->toBe(1);
+    expect(ToolLog::query()->where('tool_id', $tool->id)->count())->toBe(2)
+        ->and($component->instance()->borrowedTools()->total())->toBe(1);
 });
 
 it('returns multiple selected tools in one action', function (): void {
@@ -115,20 +115,20 @@ it('returns multiple selected tools in one action', function (): void {
         'status' => 'rented',
     ]);
 
-    ToolLog::query()->create([
+    $firstToolLog = ToolLog::query()->create([
         'tool_id' => $tool1->id,
-        'action_type' => 'borrow',
         'user_id' => User::factory()->create(['name' => '田中 一郎'])->id,
         'user_name' => '田中 一郎',
-        'logged_at' => now()->subMinutes(20),
+        'borrow_at' => now()->subMinutes(20),
+        'return_at' => null,
     ]);
 
-    ToolLog::query()->create([
+    $secondToolLog = ToolLog::query()->create([
         'tool_id' => $tool2->id,
-        'action_type' => 'borrow',
         'user_id' => User::factory()->create(['name' => '佐藤 二郎'])->id,
         'user_name' => '佐藤 二郎',
-        'logged_at' => now()->subMinutes(10),
+        'borrow_at' => now()->subMinutes(10),
+        'return_at' => null,
     ]);
 
     Livewire::test(ReturnCounter::class)
@@ -138,5 +138,31 @@ it('returns multiple selected tools in one action', function (): void {
 
     expect($tool1->fresh()->status)->toBe('available')
         ->and($tool2->fresh()->status)->toBe('available')
-        ->and(ToolLog::query()->whereIn('tool_id', [$tool1->id, $tool2->id])->where('action_type', 'return')->count())->toBe(2);
+        ->and($firstToolLog->fresh()->return_at)->not->toBeNull()
+        ->and($secondToolLog->fresh()->return_at)->not->toBeNull();
+});
+
+it('does not return the same borrowing twice', function (): void {
+    $user = User::factory()->create();
+    $tool = Tool::query()->create([
+        'management_number' => 'T-900014',
+        'name' => '二重返却防止工具',
+        'status' => 'rented',
+    ]);
+
+    $toolLog = ToolLog::query()->create([
+        'tool_id' => $tool->id,
+        'user_id' => $user->id,
+        'user_name' => $user->name,
+        'borrow_at' => now()->subMinute(),
+        'return_at' => null,
+    ]);
+
+    Livewire::test(ReturnCounter::class)
+        ->call('returnTool', $tool->id)
+        ->call('returnTool', $tool->id)
+        ->assertSee('この工具は返却できません。');
+
+    expect($toolLog->fresh()->return_at)->not->toBeNull()
+        ->and(ToolLog::query()->where('tool_id', $tool->id)->count())->toBe(1);
 });

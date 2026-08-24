@@ -75,7 +75,7 @@
                             <div class="font-medium">{{ $borrowerName }}</div>
                         </flux:table.cell>
                         <flux:table.cell variant="dim">
-                            {{ $log->logged_at->format('Y/m/d H:i') }}
+                            {{ $log->borrow_at->format('Y/m/d H:i') }}
                         </flux:table.cell>
                         <flux:table.cell class="text-right">
                             <flux:button variant="primary" size="sm"

@@ -146,10 +146,10 @@ class RentalCounter extends Component
 
                 ToolLog::query()->create([
                     'tool_id' => $tool->getKey(),
-                    'action_type' => 'borrow',
                     'user_id' => $this->userId,
                     'user_name' => trim($this->borrowerName),
-                    'logged_at' => now(),
+                    'borrow_at' => now(),
+                    'return_at' => null,
                     'note' => null,
                 ]);
 

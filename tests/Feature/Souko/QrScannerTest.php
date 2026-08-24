@@ -59,11 +59,13 @@ it('creates a borrow log and marks the tool as rented when checkout is completed
         ->assertSet('borrower_name', '');
 
     $tool = Tool::query()->where('management_number', 'T-900004')->firstOrFail();
-    $log = ToolLog::query()->where('tool_id', $tool->id)->where('action_type', 'borrow')->firstOrFail();
+    $log = ToolLog::query()->where('tool_id', $tool->id)->firstOrFail();
 
     expect($tool->status)->toBe('rented')
         ->and($log->user_id)->toBe($user->id)
-        ->and($log->user_name)->toBe('山田 太郎');
+        ->and($log->user_name)->toBe('山田 太郎')
+        ->and($log->borrow_at)->not->toBeNull()
+        ->and($log->return_at)->toBeNull();
 });
 
 it('creates only one borrow log even if the same tool is scanned more than once', function (): void {
@@ -83,7 +85,7 @@ it('creates only one borrow log even if the same tool is scanned more than once'
 
     $tool = Tool::query()->where('management_number', 'T-900005')->firstOrFail();
 
-    expect(ToolLog::query()->where('tool_id', $tool->id)->where('action_type', 'borrow')->count())->toBe(1)
+    expect(ToolLog::query()->where('tool_id', $tool->id)->count())->toBe(1)
         ->and($tool->fresh()->status)->toBe('rented');
 });
 

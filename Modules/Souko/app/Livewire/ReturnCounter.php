@@ -3,7 +3,7 @@
 namespace Modules\Souko\Livewire;
 
 use Illuminate\Pagination\LengthAwarePaginator;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Computed;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -37,13 +37,19 @@ class ReturnCounter extends Component
     }
 
     #[Computed]
-    public function borrowedTools()
+    public function borrowedTools(): LengthAwarePaginator
     {
+        $latestToolLogIds = ToolLog::query()
+            ->selectRaw('MAX(id)')
+            ->whereNull('return_at')
+            ->groupBy('tool_id');
+
         $query = ToolLog::query()
-            ->where('action_type', 'borrow')
+            ->whereNull('return_at')
+            ->whereIn('id', $latestToolLogIds)
             ->whereHas('tool', fn ($toolQuery) => $toolQuery->where('status', 'rented'))
             ->with('tool', 'user')
-            ->latest('logged_at');
+            ->latest('borrow_at');
 
         if ($this->search !== '') {
             $query->where(function ($q) {
@@ -55,52 +61,19 @@ class ReturnCounter extends Component
             });
         }
 
-        $logs = $query->get();
-        $latestLogsByTool = $logs
-            ->groupBy('tool_id')
-            ->map(fn ($toolLogs) => $toolLogs->sortByDesc('logged_at')->first())
-            ->filter()
-            ->sortByDesc('logged_at')
-            ->values();
-
-        $page = (int) ($this->getPage() ?? 1);
-        $perPage = 100;
-        $items = $latestLogsByTool
-            ->slice(($page - 1) * $perPage, $perPage)
-            ->values();
-
-        return new LengthAwarePaginator(
-            $items,
-            $latestLogsByTool->count(),
-            $perPage,
-            $page,
-            ['path' => request()->path(), 'query' => request()->query()],
-        );
+        return $query->paginate(100);
     }
 
     public function returnTool(int $toolId): void
     {
-        $tool = Tool::query()->findOrFail($toolId);
-
-        $borrowLog = ToolLog::query()
-            ->where('tool_id', $toolId)
-            ->where('action_type', 'borrow')
-            ->latest('logged_at')
-            ->first();
-
-        $userName = trim((string) ($borrowLog?->user_name ?: $borrowLog?->user?->name ?? ''));
-
-        ToolLog::query()->create([
-            'tool_id' => $tool->getKey(),
-            'action_type' => 'return',
-            'user_id' => $borrowLog?->user_id ?? Auth::id(),
-            'user_name' => $userName,
-            'logged_at' => now(),
-            'note' => null,
-        ]);
-
-        $tool->update(['status' => 'available']);
+        $tool = DB::transaction(fn () => $this->returnBorrowedTool($toolId));
         unset($this->borrowedTools);
+
+        if ($tool === null) {
+            session()->flash('message', 'この工具は返却できません。');
+
+            return;
+        }
 
         session()->flash('message', "「{$tool->name}」の返却を完了しました。");
     }
@@ -113,41 +86,42 @@ class ReturnCounter extends Component
             return;
         }
 
-        $tools = Tool::query()->whereIn('id', $toolIds)->get()->keyBy('id');
-        $returnedCount = 0;
-
-        foreach ($toolIds as $toolId) {
-            $tool = $tools->get($toolId);
-
-            if ($tool === null || $tool->status !== 'rented') {
-                continue;
-            }
-
-            $borrowLog = ToolLog::query()
-                ->where('tool_id', $toolId)
-                ->where('action_type', 'borrow')
-                ->latest('logged_at')
-                ->first();
-
-            $userName = trim((string) ($borrowLog?->user_name ?: $borrowLog?->user?->name ?? ''));
-
-            ToolLog::query()->create([
-                'tool_id' => $tool->getKey(),
-                'action_type' => 'return',
-                'user_id' => $borrowLog?->user_id ?? Auth::id(),
-                'user_name' => $userName,
-                'logged_at' => now(),
-                'note' => null,
-            ]);
-
-            $tool->update(['status' => 'available']);
-            $returnedCount++;
-        }
+        $returnedCount = DB::transaction(function () use ($toolIds): int {
+            return collect($toolIds)
+                ->filter(fn (int $toolId): bool => $this->returnBorrowedTool($toolId) !== null)
+                ->count();
+        });
 
         $this->selectedToolIds = [];
         unset($this->borrowedTools);
 
         session()->flash('message', $returnedCount.'件の返却を完了しました。');
+    }
+
+    private function returnBorrowedTool(int $toolId): ?Tool
+    {
+        $tool = Tool::query()->lockForUpdate()->find($toolId);
+
+        if ($tool === null || $tool->status !== 'rented') {
+            return null;
+        }
+
+        $toolLog = ToolLog::query()
+            ->where('tool_id', $toolId)
+            ->whereNull('return_at')
+            ->latest('borrow_at')
+            ->lockForUpdate()
+            ->first();
+
+        if ($toolLog === null) {
+            return null;
+        }
+
+        $toolLog->update(['return_at' => now()]);
+
+        $tool->update(['status' => 'available']);
+
+        return $tool;
     }
 
     public function render()
