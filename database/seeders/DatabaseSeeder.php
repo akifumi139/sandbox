@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Modules\Heya\Database\Seeders\HeyaDatabaseSeeder;
 use Modules\Souko\Database\Seeders\SoukoDatabaseSeeder;
 
 class DatabaseSeeder extends Seeder
@@ -43,6 +44,7 @@ class DatabaseSeeder extends Seeder
         ]);
 
         $this->call(SoukoDatabaseSeeder::class);
+        $this->call(HeyaDatabaseSeeder::class);
 
     }
 }

@@ -17,6 +17,10 @@
                 <flux:sidebar.item icon="wrench" class="text-black!" :href="route('souko.rental-counter')" :current="request()->routeIs('souko.rental-counter')" wire:navigate>
                     工具管理システム
                 </flux:sidebar.item>
+                <flux:sidebar.item icon="calendar-days" class="text-black!" :href="route('heya.monthly')" :current="request()->routeIs('heya.*')"
+                    wire:navigate>
+                    会議室予約
+                </flux:sidebar.item>
             </flux:sidebar.group>
         </flux:sidebar.nav>
 

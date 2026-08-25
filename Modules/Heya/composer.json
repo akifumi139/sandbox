@@ -1,0 +1,30 @@
+{
+    "name": "nwidart/heya",
+    "description": "",
+    "authors": [
+        {
+            "name": "Nicolas Widart",
+            "email": "n.widart@gmail.com"
+        }
+    ],
+    "extra": {
+        "laravel": {
+            "providers": [],
+            "aliases": {
+
+            }
+        }
+    },
+    "autoload": {
+        "psr-4": {
+            "Modules\\Heya\\": "app/",
+            "Modules\\Heya\\Database\\Factories\\": "database/factories/",
+            "Modules\\Heya\\Database\\Seeders\\": "database/seeders/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Modules\\Heya\\Tests\\": "tests/"
+        }
+    }
+}

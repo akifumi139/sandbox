@@ -1,0 +1,11 @@
+{
+    "name": "Heya",
+    "alias": "heya",
+    "description": "",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\Heya\\Providers\\HeyaServiceProvider"
+    ],
+    "files": []
+}
