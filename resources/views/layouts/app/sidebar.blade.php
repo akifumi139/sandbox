@@ -21,6 +21,10 @@
                     wire:navigate>
                     会議室予約
                 </flux:sidebar.item>
+                <flux:sidebar.item icon="calendar-days" class="text-black!" :href="route('syako.monthly')" :current="request()->routeIs('syako.*')"
+                    wire:navigate>
+                    車両予約
+                </flux:sidebar.item>
             </flux:sidebar.group>
         </flux:sidebar.nav>
 

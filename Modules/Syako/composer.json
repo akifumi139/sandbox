@@ -1,0 +1,30 @@
+{
+    "name": "nwidart/syako",
+    "description": "",
+    "authors": [
+        {
+            "name": "Nicolas Widart",
+            "email": "n.widart@gmail.com"
+        }
+    ],
+    "extra": {
+        "laravel": {
+            "providers": [],
+            "aliases": {
+
+            }
+        }
+    },
+    "autoload": {
+        "psr-4": {
+            "Modules\\Syako\\": "app/",
+            "Modules\\Syako\\Database\\Factories\\": "database/factories/",
+            "Modules\\Syako\\Database\\Seeders\\": "database/seeders/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Modules\\Syako\\Tests\\": "tests/"
+        }
+    }
+}

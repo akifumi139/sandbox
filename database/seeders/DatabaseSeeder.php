@@ -7,6 +7,7 @@ use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Modules\Heya\Database\Seeders\HeyaDatabaseSeeder;
 use Modules\Souko\Database\Seeders\SoukoDatabaseSeeder;
+use Modules\Syako\Database\Seeders\SyakoDatabaseSeeder;
 
 class DatabaseSeeder extends Seeder
 {
@@ -45,6 +46,7 @@ class DatabaseSeeder extends Seeder
 
         $this->call(SoukoDatabaseSeeder::class);
         $this->call(HeyaDatabaseSeeder::class);
+        $this->call(SyakoDatabaseSeeder::class);
 
     }
 }

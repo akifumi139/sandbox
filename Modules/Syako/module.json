@@ -1,0 +1,11 @@
+{
+    "name": "Syako",
+    "alias": "syako",
+    "description": "",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\Syako\\Providers\\SyakoServiceProvider"
+    ],
+    "files": []
+}
