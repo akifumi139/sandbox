@@ -13,6 +13,7 @@ it('allows an authenticated user to create and edit a vehicle', function (): voi
         ->test(VehicleManagement::class)
         ->call('create')
         ->set('form.name', '車両 A')
+        ->set('form.color_code', '#FF5733')
         ->set('form.vehicle_number', '品川 500 あ 1001')
         ->set('form.manufacturer', 'トヨタ')
         ->set('form.model', 'プリウス')
@@ -23,6 +24,8 @@ it('allows an authenticated user to create and edit a vehicle', function (): voi
     $vehicle = Vehicle::query()->where('name', '車両 A')->sole();
 
     expect($vehicle->vehicle_number)->toBe('品川 500 あ 1001')
+        ->and($vehicle->color_code)->toBe('#FF5733')
+        ->and($vehicle->labelTextColor())->toBe('#FFFFFF')
         ->and($vehicle->manufacturer)->toBe('トヨタ')
         ->and($vehicle->model)->toBe('プリウス')
         ->and($vehicle->model_code)->toBe('ZVW50');

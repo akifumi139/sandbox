@@ -41,3 +41,22 @@ it('loads booking details when editing', function (): void {
         ->assertSet('form.has_fuel_card', true)
         ->assertSet('form.has_etc_card', false);
 });
+
+it('creates an all-day booking spanning multiple days', function (): void {
+    $user = User::factory()->create();
+    $vehicle = Vehicle::factory()->create();
+
+    Livewire::actingAs($user)
+        ->test(BookingForm::class)
+        ->dispatch('open-booking-form', vehicleId: $vehicle->id, date: '2026-08-25')
+        ->set('form.end_date', '2026-08-27')
+        ->set('form.all_day', true)
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $booking = Booking::query()->sole();
+
+    expect($booking->starts_at->format('Y-m-d H:i'))->toBe('2026-08-25 00:00')
+        ->and($booking->ends_at->format('Y-m-d H:i'))->toBe('2026-08-28 00:00')
+        ->and($booking->isAllDay())->toBeTrue();
+});

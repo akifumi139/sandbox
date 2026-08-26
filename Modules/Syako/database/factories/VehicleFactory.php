@@ -17,6 +17,7 @@ class VehicleFactory extends Factory
     {
         return [
             'name' => fake()->unique()->bothify('車両 ??-##'),
+            'color_code' => '#D1D5DB',
             'vehicle_number' => fake()->unique()->bothify('品川 ??-##'),
             'manufacturer' => fake()->optional()->company(),
             'model' => fake()->optional()->word(),

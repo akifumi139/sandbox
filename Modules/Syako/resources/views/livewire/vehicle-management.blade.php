@@ -51,8 +51,8 @@
                                 class="{{ $vehicle->is_active ? '' : 'bg-zinc-50 text-zinc-500' }}">
                                 <flux:table.cell>
                                     <div class="flex items-center gap-3 ps-3!">
-                                        <span
-                                            class="size-2 rounded-full {{ $vehicle->is_active ? 'bg-emerald-500' : 'bg-zinc-300' }}"
+                                        <span class="size-2 rounded-full {{ $vehicle->is_active ? '' : 'bg-zinc-300' }}"
+                                            style="{{ $vehicle->is_active ? 'background-color: ' . $vehicle->color_code . ';' : '' }}"
                                             aria-hidden="true"></span>
                                         <span
                                             class="font-medium {{ $vehicle->is_active ? 'text-zinc-950' : 'text-zinc-600' }}">{{ $vehicle->name }}</span>
@@ -111,6 +111,7 @@
             </div>
             <div class="grid gap-4 sm:grid-cols-2">
                 <flux:input wire:model="form.name" label="車両名" placeholder="例: 車両 A" maxlength="255" autofocus />
+                <flux:input wire:model="form.color_code" type="color" label="表示色" />
                 <flux:input wire:model="form.vehicle_number" label="車両番号" placeholder="例: 広島 500 あ 1001"
                     maxlength="255" />
                 <flux:input wire:model="form.manufacturer" label="メーカー" placeholder="例: トヨタ" maxlength="255" />

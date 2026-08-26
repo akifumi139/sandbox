@@ -24,12 +24,14 @@ class BookingForm extends Component
 
     public ?int $bookingId = null;
 
-    /** @var array{vehicle_id: int|string, date: string, start_time: string, end_time: string, notes: string, has_fuel_card: bool, has_etc_card: bool} */
+    /** @var array{vehicle_id: int|string, date: string, end_date: string, start_time: string, end_time: string, all_day: bool, notes: string, has_fuel_card: bool, has_etc_card: bool} */
     public array $form = [
         'vehicle_id' => '',
         'date' => '',
+        'end_date' => '',
         'start_time' => '09:00',
         'end_time' => '09:30',
+        'all_day' => false,
         'notes' => '',
         'has_fuel_card' => false,
         'has_etc_card' => false,
@@ -54,8 +56,12 @@ class BookingForm extends Component
             $this->form = [
                 'vehicle_id' => $booking->vehicle_id,
                 'date' => $booking->starts_at->format('Y-m-d'),
+                'end_date' => $booking->isAllDay()
+                    ? $booking->ends_at->subDay()->format('Y-m-d')
+                    : $booking->ends_at->format('Y-m-d'),
                 'start_time' => $booking->starts_at->format('H:i'),
                 'end_time' => $booking->ends_at->format('H:i'),
+                'all_day' => $booking->isAllDay(),
                 'notes' => $booking->notes ?? '',
                 'has_fuel_card' => $booking->has_fuel_card,
                 'has_etc_card' => $booking->has_etc_card,
@@ -67,8 +73,10 @@ class BookingForm extends Component
             $this->form = [
                 'vehicle_id' => $vehicleId ?? '',
                 'date' => $date ?? now()->toDateString(),
+                'end_date' => $date ?? now()->toDateString(),
                 'start_time' => $start,
                 'end_time' => CarbonImmutable::createFromFormat('H:i', $start)->addMinutes(30)->format('H:i'),
+                'all_day' => false,
                 'notes' => '',
                 'has_fuel_card' => false,
                 'has_etc_card' => false,
@@ -131,8 +139,10 @@ class BookingForm extends Component
                 Rule::exists((new Vehicle)->getTable(), 'id')->where('is_active', true),
             ],
             'form.date' => ['required', 'date_format:Y-m-d'],
+            'form.end_date' => ['required', 'date_format:Y-m-d', 'after_or_equal:form.date'],
             'form.start_time' => ['required', 'date_format:H:i'],
             'form.end_time' => ['required', 'date_format:H:i'],
+            'form.all_day' => ['boolean'],
             'form.notes' => ['nullable', 'string', 'max:2000'],
             'form.has_fuel_card' => ['boolean'],
             'form.has_etc_card' => ['boolean'],
@@ -144,8 +154,12 @@ class BookingForm extends Component
      */
     private function validatedPeriod(): array
     {
-        $startsAt = CarbonImmutable::createFromFormat('!Y-m-d H:i', $this->form['date'].' '.$this->form['start_time']);
-        $endsAt = CarbonImmutable::createFromFormat('!Y-m-d H:i', $this->form['date'].' '.$this->form['end_time']);
+        $startTime = $this->form['all_day'] ? '00:00' : $this->form['start_time'];
+        $endTime = $this->form['all_day'] ? '00:00' : $this->form['end_time'];
+        $startsAt = CarbonImmutable::createFromFormat('!Y-m-d H:i', $this->form['date'].' '.$startTime);
+        $endsAt = $this->form['all_day']
+            ? CarbonImmutable::parse($this->form['end_date'])->addDay()->startOfDay()
+            : CarbonImmutable::createFromFormat('!Y-m-d H:i', $this->form['end_date'].' '.$endTime);
         $messages = [];
 
         if ($startsAt->minute % 30 !== 0 || $endsAt->minute % 30 !== 0) {
@@ -156,7 +170,7 @@ class BookingForm extends Component
             $messages['form.end_time'] = '終了時刻は開始時刻より後にしてください。';
         }
 
-        if ($startsAt->format('H:i') < '07:00' || $endsAt->format('H:i') > '18:00') {
+        if (! $this->form['all_day'] && ($startsAt->format('H:i') < '07:00' || $endsAt->format('H:i') > '18:00')) {
             $messages['form.start_time'] = '予約時間は7:00から18:00までです。';
         }
 

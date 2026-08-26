@@ -85,13 +85,20 @@ class VehicleBookingMonthly extends Component
     {
         $calendarDays = $this->calendarDays();
 
-        return Booking::query()
+        $bookings = Booking::query()
             ->with(['vehicle', 'user'])
-            ->whereBetween('starts_at', [$calendarDays->first()->startOfDay(), $calendarDays->last()->endOfDay()])
+            ->where('starts_at', '<', $calendarDays->last()->endOfDay())
+            ->where('ends_at', '>', $calendarDays->first()->startOfDay())
             ->when($this->selectedVehicle !== '', fn ($query) => $query->where('vehicle_id', $this->selectedVehicle))
             ->orderBy('starts_at')
-            ->get()
-            ->groupBy(fn (Booking $booking) => $booking->starts_at->toDateString());
+            ->get();
+
+        return $calendarDays->mapWithKeys(function (CarbonImmutable $day) use ($bookings): array {
+            return [$day->toDateString() => $bookings->filter(
+                fn (Booking $booking): bool => $booking->starts_at->lessThan($day->endOfDay())
+                    && $booking->ends_at->greaterThan($day->startOfDay())
+            )];
+        });
     }
 
     public function month(): CarbonImmutable

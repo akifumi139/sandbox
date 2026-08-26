@@ -15,9 +15,10 @@ class VehicleManagement extends Component
 
     public ?int $vehicleId = null;
 
-    /** @var array{name: string, vehicle_number: string, manufacturer: string, model: string, model_code: string} */
+    /** @var array{name: string, color_code: string, vehicle_number: string, manufacturer: string, model: string, model_code: string} */
     public array $form = [
         'name' => '',
+        'color_code' => '#D1D5DB',
         'vehicle_number' => '',
         'manufacturer' => '',
         'model' => '',
@@ -31,6 +32,7 @@ class VehicleManagement extends Component
         $this->vehicleId = null;
         $this->form = [
             'name' => '',
+            'color_code' => '#D1D5DB',
             'vehicle_number' => '',
             'manufacturer' => '',
             'model' => '',
@@ -47,6 +49,7 @@ class VehicleManagement extends Component
         $this->vehicleId = $vehicle->id;
         $this->form = [
             'name' => $vehicle->name,
+            'color_code' => $vehicle->color_code,
             'vehicle_number' => $vehicle->vehicle_number,
             'manufacturer' => $vehicle->manufacturer ?? '',
             'model' => $vehicle->model ?? '',
@@ -62,6 +65,7 @@ class VehicleManagement extends Component
 
         $validated = $this->validate([
             'form.name' => ['required', 'string', 'max:255', Rule::unique((new Vehicle)->getTable(), 'name')->ignore($vehicle)],
+            'form.color_code' => ['required', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'form.vehicle_number' => ['required', 'string', 'max:255', Rule::unique((new Vehicle)->getTable(), 'vehicle_number')->ignore($vehicle)],
             'form.manufacturer' => ['nullable', 'string', 'max:255'],
             'form.model' => ['nullable', 'string', 'max:255'],

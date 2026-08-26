@@ -44,6 +44,12 @@ class Booking extends Model
         return $this->belongsTo(User::class);
     }
 
+    public function isAllDay(): bool
+    {
+        return $this->starts_at->format('H:i') === '00:00'
+            && $this->ends_at->format('H:i') === '00:00';
+    }
+
     /**
      * @return array<string, string>
      */

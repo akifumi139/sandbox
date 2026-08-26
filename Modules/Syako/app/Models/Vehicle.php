@@ -15,6 +15,7 @@ use Modules\Syako\Database\Factories\VehicleFactory;
 /**
  * @property int $id
  * @property string $name
+ * @property string $color_code
  * @property string $vehicle_number
  * @property string|null $manufacturer
  * @property string|null $model
@@ -26,7 +27,7 @@ use Modules\Syako\Database\Factories\VehicleFactory;
  * @property-read Collection<int, Booking> $bookings
  */
 #[Table('syako__vehicles')]
-#[Fillable(['name', 'vehicle_number', 'manufacturer', 'model', 'model_code', 'is_active'])]
+#[Fillable(['name', 'color_code', 'vehicle_number', 'manufacturer', 'model', 'model_code', 'is_active'])]
 class Vehicle extends Model
 {
     /** @use HasFactory<VehicleFactory> */
@@ -42,6 +43,17 @@ class Vehicle extends Model
     public function bookings(): HasMany
     {
         return $this->hasMany(Booking::class);
+    }
+
+    public function labelTextColor(): string
+    {
+        $red = hexdec(substr($this->color_code, 1, 2));
+        $green = hexdec(substr($this->color_code, 3, 2));
+        $blue = hexdec(substr($this->color_code, 5, 2));
+
+        return (299 * $red + 587 * $green + 114 * $blue) >= 128000
+            ? '#18181B'
+            : '#FFFFFF';
     }
 
     /**

@@ -14,6 +14,7 @@ return new class extends Migration
         Schema::create('syako__vehicles', function (Blueprint $table) {
             $table->id();
             $table->string('name')->unique();
+            $table->string('color_code', 7)->default('#D1D5DB')->comment('表示色');
             $table->string('vehicle_number')->unique()->comment('車両番号・ナンバープレート');
             $table->string('manufacturer')->nullable()->comment('メーカー');
             $table->string('model')->nullable()->comment('車種');

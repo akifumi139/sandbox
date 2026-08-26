@@ -3,7 +3,7 @@
         <div>
             <flux:heading size="lg">{{ $bookingId === null ? '新規予約' : ($readOnly ? '予約詳細' : '予約を編集') }}
             </flux:heading>
-            <flux:text class="mt-2">車両と利用時間を指定してください。</flux:text>
+            <flux:text class="mt-2">車両と利用期間を指定してください。</flux:text>
         </div>
 
         <flux:select wire:model="form.vehicle_id" label="車両" :disabled="$readOnly">
@@ -15,14 +15,23 @@
             @endforeach
         </flux:select>
 
-        <flux:input wire:model="form.date" type="date" label="日付" :disabled="$readOnly" />
-
         <div class="grid grid-cols-2 gap-4">
-            <flux:input wire:model="form.start_time" type="time" min="07:00" max="17:30" step="1800"
-                label="開始" :disabled="$readOnly" />
-            <flux:input wire:model="form.end_time" type="time" min="07:30" max="18:00" step="1800"
-                label="終了" :disabled="$readOnly" />
+            <flux:input wire:model="form.date" type="date" label="開始日" :disabled="$readOnly" />
+            <flux:input wire:model="form.end_date" type="date" label="終了日" :disabled="$readOnly" />
         </div>
+
+        <flux:checkbox wire:model.live="form.all_day" label="終日" :disabled="$readOnly" />
+
+        @if ($form['all_day'])
+            <flux:text>利用時間: 00:00〜24:00</flux:text>
+        @else
+            <div class="grid grid-cols-2 gap-4">
+                <flux:input wire:model="form.start_time" type="time" min="07:00" max="17:30" step="1800"
+                    label="開始" :disabled="$readOnly" />
+                <flux:input wire:model="form.end_time" type="time" min="07:30" max="18:00" step="1800"
+                    label="終了" :disabled="$readOnly" />
+            </div>
+        @endif
 
         <flux:textarea wire:model="form.notes" label="備考" rows="3" :disabled="$readOnly" />
 

@@ -94,7 +94,7 @@
 
                                 {{-- 予約一覧 --}}
                                 <div class="mt-1 space-y-1">
-                                    @foreach ($dayBookings->take(3) as $booking)
+                                    @foreach ($dayBookings as $booking)
                                         @php
                                             $isOwner = $booking->user_id === auth()->id();
                                         @endphp
@@ -103,12 +103,13 @@
                                         <button type="button"
                                             class="block w-full border px-1.5 py-1 text-left text-[11px] leading-tight
                                                 {{ $isOwner ? 'border-emerald-200 bg-emerald-50 text-emerald-950' : 'border-zinc-200 bg-zinc-100 text-zinc-800' }}"
+                                            style="background-color: {{ $booking->vehicle->color_code }}; border-color: {{ $booking->vehicle->color_code }}; color: {{ $booking->vehicle->labelTextColor() }};"
                                             wire:key="monthly-booking-{{ $booking->id }}"
                                             x-on:click.stop="$dispatch('open-booking-form', {
                                                 bookingId: {{ $booking->id }}
                                             })">
                                             <span class="block truncate font-bold">
-                                                {{ $booking->starts_at->format('H:i') }}
+                                                {{ $booking->isAllDay() ? '終日' : $booking->starts_at->format('H:i') }}
                                                 {{ $booking->vehicle->name }}
                                             </span>
 
@@ -118,12 +119,6 @@
                                         </button>
                                     @endforeach
 
-                                    {{-- 4件以上ある場合 --}}
-                                    @if ($dayBookings->count() > 3)
-                                        <p class="px-1 text-[10px] text-zinc-500">
-                                            ほか {{ $dayBookings->count() - 3 }}件
-                                        </p>
-                                    @endif
                                 </div>
                             </div>
                         @endforeach
