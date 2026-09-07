@@ -6,7 +6,9 @@ use Illuminate\Database\Eloquent\Builder;
 use Livewire\Attributes\Computed;
 use Livewire\Component;
 use Livewire\WithPagination;
+use Modules\Souko\Actions\GenerateToolQrPdf;
 use Modules\Souko\Models\Tool;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class Inventory extends Component
 {
@@ -17,6 +19,9 @@ class Inventory extends Component
     public string $status = '';
 
     public string $type = '';
+
+    /** @var array<int, int|string> */
+    public array $selectedToolIds = [];
 
     public bool $showQrModal = false;
 
@@ -34,16 +39,24 @@ class Inventory extends Component
     public function updatingSearch(): void
     {
         $this->resetPage();
+        $this->selectedToolIds = [];
     }
 
     public function updatingStatus(): void
     {
         $this->resetPage();
+        $this->selectedToolIds = [];
     }
 
     public function updatingType(): void
     {
         $this->resetPage();
+        $this->selectedToolIds = [];
+    }
+
+    public function updatingPage(): void
+    {
+        $this->selectedToolIds = [];
     }
 
     #[Computed]
@@ -70,7 +83,7 @@ class Inventory extends Component
             ->orderBy('name')
             ->orderBy('management_number');
 
-        return $query->paginate(10);
+        return $query->paginate(200);
     }
 
     #[Computed]
@@ -111,8 +124,57 @@ class Inventory extends Component
         $tool = Tool::query()->findOrFail($toolId);
         $tool->delete();
 
+        $this->selectedToolIds = array_values(array_diff(
+            array_map('intval', $this->selectedToolIds),
+            [$toolId],
+        ));
         unset($this->tools);
         session()->flash('message', $tool->name.' を削除しました。');
+    }
+
+    public function toggleSelectAllVisibleTools(): void
+    {
+        $visibleToolIds = $this->tools->getCollection()
+            ->pluck('id')
+            ->map(fn (int|string $toolId): int => (int) $toolId)
+            ->all();
+
+        $selectedToolIds = array_map('intval', $this->selectedToolIds);
+
+        if ($visibleToolIds !== [] && count(array_diff($visibleToolIds, $selectedToolIds)) === 0) {
+            $this->selectedToolIds = [];
+
+            return;
+        }
+
+        $this->selectedToolIds = $visibleToolIds;
+    }
+
+    public function exportSelectedToolQrCodes(GenerateToolQrPdf $generateToolQrPdf): ?StreamedResponse
+    {
+        $selectedToolIds = array_values(array_unique(array_map('intval', $this->selectedToolIds)));
+
+        if ($selectedToolIds === []) {
+            $this->addError('selectedToolIds', 'PDFに出力する工具を選択してください。');
+
+            return null;
+        }
+
+        $visibleToolIds = $this->tools->getCollection()
+            ->pluck('id')
+            ->map(fn (int|string $toolId): int => (int) $toolId)
+            ->all();
+
+        if (array_diff($selectedToolIds, $visibleToolIds) !== []) {
+            $this->addError('selectedToolIds', '現在表示中の工具だけを選択してください。');
+
+            return null;
+        }
+
+        $this->resetValidation('selectedToolIds');
+        $this->selectedToolIds = [];
+
+        return $generateToolQrPdf->handle($selectedToolIds);
     }
 
     public function openQrModal(string $managementNumber): void

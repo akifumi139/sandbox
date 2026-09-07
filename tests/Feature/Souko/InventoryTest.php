@@ -95,3 +95,49 @@ it('deletes a tool from the inventory', function (): void {
 
     expect(Tool::query()->whereKey($tool->id)->exists())->toBeFalse();
 });
+
+it('selects all tools currently visible on the inventory page', function (): void {
+    $tools = Tool::factory()->count(2)->create();
+
+    Livewire::test(Inventory::class)
+        ->call('toggleSelectAllVisibleTools')
+        ->assertSet('selectedToolIds', $tools->sortBy([
+            ['type', 'asc'],
+            ['name', 'asc'],
+            ['management_number', 'asc'],
+        ])->pluck('id')->values()->all())
+        ->call('toggleSelectAllVisibleTools')
+        ->assertSet('selectedToolIds', []);
+});
+
+it('rejects PDF export without selected tools', function (): void {
+    Livewire::test(Inventory::class)
+        ->call('exportSelectedToolQrCodes')
+        ->assertHasErrors(['selectedToolIds'])
+        ->assertNoFileDownloaded();
+});
+
+it('downloads a PDF for selected tools on the current page', function (): void {
+    $tool = Tool::factory()->create([
+        'management_number' => 'T-QR-000001',
+    ]);
+
+    Livewire::test(Inventory::class)
+        ->set('selectedToolIds', [$tool->id])
+        ->call('exportSelectedToolQrCodes')
+        ->assertFileDownloaded(null, null, 'application/pdf');
+});
+
+it('rejects tools outside the current inventory page', function (): void {
+    $tools = collect(range(1, 11))->map(fn (int $number): Tool => Tool::factory()->create([
+        'management_number' => sprintf('T-PAGE-%06d', $number),
+        'name' => 'ページ確認工具',
+        'type' => 'ページ確認',
+    ]));
+
+    Livewire::test(Inventory::class)
+        ->set('selectedToolIds', [$tools->last()->id])
+        ->call('exportSelectedToolQrCodes')
+        ->assertHasErrors(['selectedToolIds'])
+        ->assertNoFileDownloaded();
+});

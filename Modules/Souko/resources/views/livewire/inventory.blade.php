@@ -171,17 +171,41 @@
             <div class="p-4 sm:px-6 border-b border-zinc-200 dark:border-zinc-700 flex items-center justify-between">
                 <div>
                     <flux:heading size="lg">工具一覧</flux:heading>
-                    <flux:subheading>{{ $this->tools->total() }}件</flux:subheading>
+                    <flux:subheading>
+                        {{ $this->tools->total() }}件
+                        @if (count($selectedToolIds) > 0)
+                            / {{ count($selectedToolIds) }}件選択中
+                        @endif
+                    </flux:subheading>
                 </div>
 
-                {{-- <flux:button variant="ghost" size="sm" icon="arrow-down-tray">
-                    CSV出力
-                </flux:button> --}}
+                <flux:button wire:click="exportSelectedToolQrCodes" wire:loading.attr="disabled"
+                    wire:target="exportSelectedToolQrCodes" variant="primary" size="sm" icon="arrow-down-tray"
+                    :disabled="count($selectedToolIds) === 0">
+                    <span wire:loading.remove wire:target="exportSelectedToolQrCodes">QRをPDF出力</span>
+                    <span wire:loading wire:target="exportSelectedToolQrCodes">PDF生成中...</span>
+                </flux:button>
             </div>
+
+            @error('selectedToolIds')
+                <div
+                    class="border-b border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-800 dark:bg-rose-950 dark:text-rose-200">
+                    {{ $message }}
+                </div>
+            @enderror
 
             <!-- Table (Desktop & Mobile Responsive) -->
             <flux:table class="px-3">
                 <flux:table.columns>
+                    <flux:table.column>
+                        <input type="checkbox" aria-label="表示中の工具をすべて選択" wire:click="toggleSelectAllVisibleTools"
+                            @checked(
+                                $this->tools->isNotEmpty() &&
+                                    count(array_diff(
+                                            $this->tools->pluck('id')->map(fn($id) => (int) $id)->all(),
+                                            array_map('intval', $selectedToolIds))) === 0)
+                            class="rounded border-zinc-300 text-zinc-900 focus:ring-zinc-500 dark:border-zinc-600 dark:bg-zinc-800">
+                    </flux:table.column>
                     <flux:table.column>管理番号</flux:table.column>
                     <flux:table.column>工具名</flux:table.column>
                     <flux:table.column>種類</flux:table.column>
@@ -202,7 +226,7 @@
 
                         @if ($previousToolType !== $toolTypeLabel)
                             <flux:table.row wire:key="tool-type-{{ $toolTypeLabel }}">
-                                <flux:table.cell colspan="6"
+                                <flux:table.cell colspan="7"
                                     class="bg-zinc-50 py-2 text-xs font-semibold text-zinc-600 dark:bg-zinc-900 dark:text-zinc-300">
                                     {{ $toolTypeLabel }}
                                 </flux:table.cell>
@@ -213,6 +237,11 @@
                         @endif
 
                         <flux:table.row wire:key="tool-{{ $tool->id }}">
+                            <flux:table.cell>
+                                <input type="checkbox" value="{{ $tool->id }}" wire:model.live="selectedToolIds"
+                                    aria-label="{{ $tool->management_number }}を選択"
+                                    class="rounded border-zinc-300 text-zinc-900 focus:ring-zinc-500 dark:border-zinc-600 dark:bg-zinc-800">
+                            </flux:table.cell>
                             <flux:table.cell class="font-mono text-xs">{{ $tool->management_number }}
                             </flux:table.cell>
                             <flux:table.cell class="font-medium">{{ $tool->name }}</flux:table.cell>
@@ -261,7 +290,7 @@
                         </flux:table.row>
                     @empty
                         <flux:table.row>
-                            <flux:table.cell colspan="6" class="py-8 text-center text-zinc-500 dark:text-zinc-400">
+                            <flux:table.cell colspan="7" class="py-8 text-center text-zinc-500 dark:text-zinc-400">
                                 該当する工具がありません
                             </flux:table.cell>
                         </flux:table.row>
