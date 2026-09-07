@@ -13,6 +13,7 @@ use Modules\Souko\Database\Factories\ToolFactory;
     Fillable([
         'management_number',
         'name',
+        'type',
         'model',
         'manufacturer',
         'status',

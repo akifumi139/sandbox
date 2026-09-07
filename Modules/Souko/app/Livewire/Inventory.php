@@ -16,6 +16,8 @@ class Inventory extends Component
 
     public string $status = '';
 
+    public string $type = '';
+
     public bool $showQrModal = false;
 
     public string $qrManagementNumber = '';
@@ -23,6 +25,7 @@ class Inventory extends Component
     public array $form = [
         'management_number' => '',
         'name' => '',
+        'type' => '',
         'model' => '',
         'manufacturer' => '',
         'status' => 'available',
@@ -38,6 +41,11 @@ class Inventory extends Component
         $this->resetPage();
     }
 
+    public function updatingType(): void
+    {
+        $this->resetPage();
+    }
+
     #[Computed]
     public function tools()
     {
@@ -48,15 +56,32 @@ class Inventory extends Component
                 $query->where(function ($toolQuery) use ($search): void {
                     $toolQuery->where('management_number', 'like', $search)
                         ->orWhere('name', 'like', $search)
+                        ->orWhere('type', 'like', $search)
                         ->orWhere('model', 'like', $search);
                 });
             })
             ->when($this->status !== '', function (Builder $query): void {
                 $query->where('status', $this->status);
             })
+            ->when($this->type !== '', function (Builder $query): void {
+                $query->where('type', $this->type);
+            })
+            ->orderBy('type')
+            ->orderBy('name')
             ->orderBy('management_number');
 
         return $query->paginate(10);
+    }
+
+    #[Computed]
+    public function toolTypes()
+    {
+        return Tool::query()
+            ->whereNotNull('type')
+            ->where('type', '!=', '')
+            ->distinct()
+            ->orderBy('type')
+            ->pluck('type');
     }
 
     public function saveTool(): void
@@ -64,10 +89,13 @@ class Inventory extends Component
         $this->validate([
             'form.management_number' => ['required', 'string', 'max:255', 'unique:souko__tools,management_number'],
             'form.name' => ['required', 'string', 'max:255'],
+            'form.type' => ['nullable', 'string', 'max:255'],
             'form.model' => ['nullable', 'string', 'max:255'],
             'form.manufacturer' => ['nullable', 'string', 'max:255'],
             'form.status' => ['required', 'in:available,rented,maintenance,disposed'],
         ]);
+
+        $this->form['type'] = trim($this->form['type']);
 
         Tool::query()->create($this->form);
 
@@ -102,11 +130,15 @@ class Inventory extends Component
                 $query->where(function ($toolQuery) use ($search): void {
                     $toolQuery->where('management_number', 'like', $search)
                         ->orWhere('name', 'like', $search)
+                        ->orWhere('type', 'like', $search)
                         ->orWhere('model', 'like', $search);
                 });
             })
             ->when($this->status !== '', function (Builder $query): void {
                 $query->where('status', $this->status);
+            })
+            ->when($this->type !== '', function (Builder $query): void {
+                $query->where('type', $this->type);
             });
 
         $totalTools = $query->count();

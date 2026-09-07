@@ -17,6 +17,25 @@ class ToolFactory extends Factory
      */
     public function definition(): array
     {
-        return [];
+        return [
+            'management_number' => fake()->unique()->bothify('T-######'),
+            'name' => fake()->randomElement(['インパクトドライバー', '丸ノコ', '脚立', 'ハンマードリル']),
+            'type' => fake()->randomElement(['電動工具', '切断工具', '脚立']),
+            'model' => fake()->bothify('MODEL-###'),
+            'manufacturer' => fake()->company(),
+            'status' => fake()->randomElement(['available', 'rented', 'maintenance', 'disposed']),
+        ];
+    }
+
+    public function ladder(): static
+    {
+        return $this->state(fn (array $attributes): array => [
+            'management_number' => fake()->unique()->bothify('L-######'),
+            'name' => '脚立',
+            'type' => '脚立',
+            'model' => fake()->randomElement(['4尺', '6尺', '8尺']),
+            'manufacturer' => 'PiCa',
+            'status' => 'available',
+        ]);
     }
 }

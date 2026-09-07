@@ -16,6 +16,7 @@ class ToolSeeder extends Seeder
             [
                 'management_number' => 'T-000123',
                 'name' => 'インパクトドライバー',
+                'type' => '電動工具',
                 'model' => 'TD172DRGX',
                 'manufacturer' => 'Makita',
                 'status' => 'available',
@@ -23,6 +24,7 @@ class ToolSeeder extends Seeder
             [
                 'management_number' => 'T-000456',
                 'name' => 'ハンマードリル',
+                'type' => '電動工具',
                 'model' => 'HR2630',
                 'manufacturer' => 'Makita',
                 'status' => 'available',
@@ -30,8 +32,25 @@ class ToolSeeder extends Seeder
             [
                 'management_number' => 'T-000789',
                 'name' => '丸ノコ',
+                'type' => '切断工具',
                 'model' => 'HS6303',
                 'manufacturer' => 'Makita',
+                'status' => 'available',
+            ],
+            [
+                'management_number' => 'L-000001',
+                'name' => '脚立',
+                'type' => '脚立',
+                'model' => '6尺',
+                'manufacturer' => 'PiCa',
+                'status' => 'available',
+            ],
+            [
+                'management_number' => 'L-000002',
+                'name' => '脚立',
+                'type' => '脚立',
+                'model' => '6尺',
+                'manufacturer' => 'PiCa',
                 'status' => 'available',
             ],
         ];

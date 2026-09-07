@@ -102,6 +102,7 @@ class RentalCounter extends Component
             'id' => $tool->getKey(),
             'code' => $tool->management_number,
             'name' => $tool->name,
+            'type' => $tool->type ?: '未分類',
             'model_number' => $tool->model ?? '-',
             'quantity' => 1,
         ];

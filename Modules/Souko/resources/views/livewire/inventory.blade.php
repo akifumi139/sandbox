@@ -23,7 +23,7 @@
             </flux:modal.trigger>
         </div>
 
-        <flux:modal name="tool-create-modal" class="md:w-[40rem]">
+        <flux:modal name="tool-create-modal" class="md:max-w-160">
             <form wire:submit.prevent="saveTool" class="space-y-6">
                 <div>
                     <flux:heading size="lg">工具を登録</flux:heading>
@@ -33,6 +33,7 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <flux:input wire:model="form.management_number" label="管理番号" placeholder="T-900001" />
                     <flux:input wire:model="form.name" label="工具名" placeholder="インパクトドライバー" />
+                    <flux:input wire:model="form.type" label="種類" placeholder="脚立" />
                     <flux:input wire:model="form.model" label="型番" placeholder="TD172DRGX" />
                     <flux:input wire:model="form.manufacturer" label="メーカー" placeholder="Makita" />
                     <div class="md:col-span-2">
@@ -138,9 +139,9 @@
 
         <!-- Search & Filter -->
         <flux:card>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div class="md:col-span-2">
-                    <flux:input wire:model.live="search" label="検索" placeholder="工具名・管理番号・型番"
+                    <flux:input wire:model.live="search" label="検索" placeholder="工具名・種類・管理番号・型番"
                         icon="magnifying-glass" />
                 </div>
 
@@ -151,6 +152,15 @@
                         <flux:select.option value="rented">貸出中</flux:select.option>
                         <flux:select.option value="maintenance">修理中</flux:select.option>
                         <flux:select.option value="disposed">廃棄</flux:select.option>
+                    </flux:select>
+                </div>
+
+                <div>
+                    <flux:select wire:model.live="type" label="種類">
+                        <flux:select.option value="">すべて</flux:select.option>
+                        @foreach ($this->toolTypes as $toolType)
+                            <flux:select.option value="{{ $toolType }}">{{ $toolType }}</flux:select.option>
+                        @endforeach
                     </flux:select>
                 </div>
             </div>
@@ -174,16 +184,39 @@
                 <flux:table.columns>
                     <flux:table.column>管理番号</flux:table.column>
                     <flux:table.column>工具名</flux:table.column>
+                    <flux:table.column>種類</flux:table.column>
                     <flux:table.column>型番</flux:table.column>
                     <flux:table.column>状態</flux:table.column>
                     <flux:table.column></flux:table.column>
                 </flux:table.columns>
 
                 <flux:table.rows>
+                    @php
+                        $previousToolType = null;
+                    @endphp
+
                     @forelse ($this->tools as $tool)
+                        @php
+                            $toolTypeLabel = filled($tool->type) ? $tool->type : '未分類';
+                        @endphp
+
+                        @if ($previousToolType !== $toolTypeLabel)
+                            <flux:table.row wire:key="tool-type-{{ $toolTypeLabel }}">
+                                <flux:table.cell colspan="6"
+                                    class="bg-zinc-50 py-2 text-xs font-semibold text-zinc-600 dark:bg-zinc-900 dark:text-zinc-300">
+                                    {{ $toolTypeLabel }}
+                                </flux:table.cell>
+                            </flux:table.row>
+                            @php
+                                $previousToolType = $toolTypeLabel;
+                            @endphp
+                        @endif
+
                         <flux:table.row wire:key="tool-{{ $tool->id }}">
-                            <flux:table.cell class="font-mono text-xs">{{ $tool->management_number }}</flux:table.cell>
+                            <flux:table.cell class="font-mono text-xs">{{ $tool->management_number }}
+                            </flux:table.cell>
                             <flux:table.cell class="font-medium">{{ $tool->name }}</flux:table.cell>
+                            <flux:table.cell variant="dim">{{ $toolTypeLabel }}</flux:table.cell>
                             <flux:table.cell variant="dim">{{ $tool->model ?? '-' }}</flux:table.cell>
                             <flux:table.cell>
                                 @php
@@ -228,7 +261,7 @@
                         </flux:table.row>
                     @empty
                         <flux:table.row>
-                            <flux:table.cell colspan="5" class="py-8 text-center text-zinc-500 dark:text-zinc-400">
+                            <flux:table.cell colspan="6" class="py-8 text-center text-zinc-500 dark:text-zinc-400">
                                 該当する工具がありません
                             </flux:table.cell>
                         </flux:table.row>

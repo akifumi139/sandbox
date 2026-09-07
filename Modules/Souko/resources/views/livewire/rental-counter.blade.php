@@ -79,6 +79,8 @@
                                             <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
                                                 管理番号：{{ $item['code'] }}</p>
                                             <p class="text-xs text-zinc-500 dark:text-zinc-400">
+                                                種類：{{ $item['type'] }}</p>
+                                            <p class="text-xs text-zinc-500 dark:text-zinc-400">
                                                 型番：{{ $item['model_number'] }}</p>
                                         </div>
                                         <div class="flex flex-wrap items-center gap-3">
