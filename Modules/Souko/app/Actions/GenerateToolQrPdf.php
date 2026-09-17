@@ -88,7 +88,7 @@ class GenerateToolQrPdf
 
     private function japaneseFontPath(): ?string
     {
-        $fontPath = base_path('Modules/Souko/resources/fonts/ArialUnicodeJapanese.ttf');
+        $fontPath = base_path('Modules/Souko/resources/fonts/NotoSansJP-Regular.ttf');
 
         return is_file($fontPath) ? $fontPath : null;
     }
