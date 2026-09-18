@@ -25,6 +25,10 @@
                     wire:navigate>
                     車両予約
                 </flux:sidebar.item>
+                <flux:sidebar.item icon="calendar-days" class="text-black!" :href="route('calendar.index')" :current="request()->routeIs('calendar.*')"
+                    wire:navigate>
+                    タスク管理
+                </flux:sidebar.item>
             </flux:sidebar.group>
         </flux:sidebar.nav>
 
