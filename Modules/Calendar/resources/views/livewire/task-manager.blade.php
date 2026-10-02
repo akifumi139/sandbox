@@ -1,195 +1,271 @@
 @php
-    $calendarLayout = $this->calendarLayout;
-    $calendarDays = $this->calendarDays;
-    $ganttDays = $this->ganttDays;
-    $ganttStart = $ganttDays->first();
-    $ganttEnd = $ganttDays->last();
     $month = $this->month();
+    $centerDate = $this->centerDate();
+    $weekdayNames = ['日', '月', '火', '水', '木', '金', '土'];
+    $monthDays = $viewMode === 'month' ? $this->monthDays : collect();
+    $monthTasks = $viewMode === 'month' ? $this->monthTasks : collect();
+    $weekDays = $viewMode === 'week' ? $this->weekDays : collect();
+    $weekTasks = $viewMode === 'week' ? $this->weekTasks : collect();
+    $dayTasks = $viewMode === 'day' ? $this->dayTasks : collect();
+    $daySchedule = $viewMode === 'day' ? $this->daySchedule : [];
+    $periodLabel = match ($viewMode) {
+        'week' => $weekDays->first()->format('n/j') . ' - ' . $weekDays->last()->format('n/j'),
+        'day' => $centerDate->format('Y年n月j日') . '（' . $weekdayNames[$centerDate->dayOfWeek] . '）',
+        default => $month->format('Y年n月'),
+    };
 @endphp
 
-<div class="min-h-screen bg-zinc-50 p-4 text-zinc-800 antialiased sm:p-6" x-data="calendarTaskManager({ rowHeights: @js($calendarLayout['rowHeights']), ganttCellWidth: 48 })">
-    <div class="mx-auto max-w-7xl space-y-5">
-        <header class="flex flex-col justify-between gap-4 border-b border-zinc-200 pb-5 sm:flex-row sm:items-end">
+<div class="min-h-screen bg-[#f7f6f2] px-4 py-6 text-[#2c3440] antialiased sm:px-6 lg:px-8" x-data="calendarTaskManager({})">
+    <div class="mx-auto max-w-[1600px]">
+        <header class="mb-7 flex flex-wrap items-end justify-between gap-5 border-b border-[#e4e7e5] pb-5">
             <div>
-                <flux:heading size="xl" level="1">タスク管理</flux:heading>
-                <flux:subheading>
-                    {{ $viewMode === 'gantt' ? $this->centerDate()->format('Y年n月j日') . 'を中心に表示' : $month->format('Y年n月') . 'の月間スケジュール' }}
-                </flux:subheading>
+                <flux:heading size="xl" level="1" class="mt-2">タスク管理</flux:heading>
+                <flux:subheading class="mt-1">{{ $periodLabel }}</flux:subheading>
             </div>
-            <div class="flex flex-wrap gap-2">
+            <div class="flex flex-wrap items-center gap-3">
                 <flux:button variant="primary" icon="plus"
                     x-on:click="$dispatch('open-task-form', { date: '{{ now()->toDateString() }}' })">
                     タスクを追加
                 </flux:button>
-                <div class="flex rounded-md border border-zinc-200 bg-white p-1">
-                    <flux:button wire:click="$set('viewMode', 'gantt')" :variant="$viewMode === 'gantt' ? 'primary' : 'ghost'" size="sm"
-                        icon="list-bullet">ガント</flux:button>
-                    <flux:button wire:click="$set('viewMode', 'calendar')" :variant="$viewMode === 'calendar' ? 'primary' : 'ghost'" size="sm"
-                        icon="calendar-days">月間</flux:button>
+                <div class="flex rounded-lg bg-[#e8efeb] p-1" role="group" aria-label="表示単位">
+                    <flux:button wire:click="$set('viewMode', 'month')" :variant="$viewMode === 'month' ? 'primary' : 'ghost'" size="sm">月</flux:button>
+                    <flux:button wire:click="$set('viewMode', 'week')" :variant="$viewMode === 'week' ? 'primary' : 'ghost'" size="sm">週</flux:button>
+                    <flux:button wire:click="$set('viewMode', 'day')" :variant="$viewMode === 'day' ? 'primary' : 'ghost'" size="sm">日</flux:button>
                 </div>
             </div>
         </header>
 
-        @if ($viewMode === 'gantt')
-            <section class="overflow-hidden border border-zinc-200 bg-white shadow-sm" aria-label="ガントチャート">
-                <div class="flex items-center justify-between border-b border-zinc-200 p-3">
-                    <div class="flex items-center gap-1">
-                        <flux:button wire:click="previousGanttRange" variant="ghost" size="sm" icon="chevron-left"
-                            aria-label="前の期間" />
-                        <flux:button wire:click="today" size="sm">今日</flux:button>
-                        <flux:button wire:click="nextGanttRange" variant="ghost" size="sm" icon="chevron-right"
-                            aria-label="次の期間" />
-                    </div>
-                    <span class="text-xs tabular-nums text-zinc-500">{{ $this->ganttTasks->count() }}件</span>
+        <section class="overflow-hidden rounded-lg border border-[#e1e6e2] bg-white shadow-sm" aria-label="タスクスケジュール">
+            <div class="flex flex-wrap items-center justify-between gap-3 border-b border-[#e8ece9] px-4 py-3 md:px-5">
+                <div class="flex items-center gap-2">
+                    <flux:button wire:click="previousPeriod" variant="ghost" size="sm" icon="chevron-left"
+                        aria-label="前の期間" />
+                    <flux:button wire:click="today" size="sm">今日</flux:button>
+                    <flux:button wire:click="nextPeriod" variant="ghost" size="sm" icon="chevron-right"
+                        aria-label="次の期間" />
+                    <span class="ml-1 text-sm font-bold tabular-nums text-[#46514b]">{{ $periodLabel }}</span>
                 </div>
+                <span class="text-xs text-[#89958f]">
+                    {{ match ($viewMode) {'week' => $weekTasks->count(),'day' => $dayTasks->count(),default => $monthTasks->count()} }}件を表示
+                </span>
+            </div>
 
-                <div class="flex overflow-hidden">
-                    <div class="z-10 w-40 shrink-0 border-e border-zinc-200 bg-zinc-50 sm:w-56">
-                        <div
-                            class="flex h-11 items-center border-b border-zinc-200 px-3 text-xs font-semibold text-zinc-500">
-                            タスク名</div>
-                        @forelse ($this->ganttTasks as $task)
-                            <button type="button"
-                                class="flex h-14 w-full items-center px-3 text-left text-sm font-medium hover:bg-zinc-100"
-                                wire:key="gantt-name-{{ $task->id }}"
-                                x-on:click="$dispatch('open-task-form', { taskId: {{ $task->id }} })">
-                                <span class="truncate">{{ $task->name }}</span>
-                            </button>
+            @if ($viewMode === 'month')
+                <div class="overflow-x-auto overscroll-x-contain" x-ref="monthScroller">
+                    <div class="min-w-max" x-ref="monthGrid"
+                        style="--label-width: 250px; width: {{ 250 + $monthDays->count() * 42 }}px">
+                        <div class="sticky top-0 z-10 grid h-12 border-b border-[#e8ece9] bg-[#f8faf8] text-center text-[10px] font-semibold text-[#76837d]"
+                            style="grid-template-columns: 250px repeat({{ $monthDays->count() }}, 42px)">
+                            <div
+                                class="sticky left-0 z-20 flex items-center border-e border-[#e3e8e4] bg-[#f8faf8] px-4 text-left">
+                                タスク / 担当</div>
+                            @foreach ($monthDays as $day)
+                                <button type="button" data-grid-day data-date="{{ $day->toDateString() }}"
+                                    wire:key="month-day-{{ $day->toDateString() }}"
+                                    wire:click="showDay('{{ $day->toDateString() }}')"
+                                    aria-label="{{ $day->format('n月j日') }}を日表示"
+                                    class="flex flex-col items-center justify-center border-e border-[#edf0ed] hover:bg-[#eaf2ed] {{ $day->isToday() ? 'bg-[#eaf2ed] text-[#416b63]' : ($day->isWeekend() ? 'bg-[#fafaf7]' : '') }}">
+                                    <span>{{ $day->day }}</span>
+                                    <span class="font-normal">{{ $weekdayNames[$day->dayOfWeek] }}</span>
+                                </button>
+                            @endforeach
+                        </div>
+
+                        @forelse ($monthTasks as $task)
+                            @php
+                                $monthStart = $monthDays->first();
+                                $monthEnd = $monthDays->last();
+                                $visibleStart = $task->start_date->lessThan($monthStart)
+                                    ? $monthStart
+                                    : $task->start_date;
+                                $visibleEnd = $task->end_date->greaterThan($monthEnd) ? $monthEnd : $task->end_date;
+                                $offset = (int) $monthStart->diffInDays($visibleStart);
+                                $duration = (int) $visibleStart->diffInDays($visibleEnd) + 1;
+                            @endphp
+                            <div class="relative grid h-14 border-b border-[#edf0ed]"
+                                wire:key="month-row-{{ $task->id }}"
+                                style="grid-template-columns: 250px repeat({{ $monthDays->count() }}, 42px)">
+                                <div
+                                    class="sticky left-0 z-4 flex min-w-0 items-center gap-2 border-e border-[#e3e8e4] bg-white px-3">
+                                    <span class="size-2.5 shrink-0 rounded-full"
+                                        style="background-color: {{ $task->color }}"></span>
+                                    <div class="min-w-0">
+                                        <div class="truncate text-xs font-semibold text-[#35413a]">{{ $task->name }}
+                                        </div>
+                                        <div class="truncate text-[10px] text-[#8a9690]">
+                                            {{ implode('、', $task->assignees ?? []) }}</div>
+                                    </div>
+                                </div>
+                                @foreach ($monthDays as $day)
+                                    <div wire:key="month-cell-{{ $task->id }}-{{ $day->toDateString() }}"
+                                        class="border-e border-[#edf0ed] {{ $day->isWeekend() ? 'bg-[#fafaf7]' : '' }} {{ $day->isToday() ? 'bg-[#eaf2ed]' : '' }}">
+                                    </div>
+                                @endforeach
+                                <button type="button" data-month-bar data-task-id="{{ $task->id }}"
+                                    class="absolute top-2 z-5 flex h-10 items-center gap-2 overflow-hidden rounded-sm px-2 text-left text-[11px] font-semibold text-[#35413a] shadow-sm {{ $task->user_id === auth()->id() ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer' }}"
+                                    style="grid-column: {{ $offset + 2 }} / span {{ $duration }}; left: 3px; right: 3px; background-color: color-mix(in srgb, {{ $task->color }} 20%, white); border-inline-start: 3px solid {{ $task->color }}"
+                                    x-on:pointerdown="startMonthDrag($event, {{ $task->id }}, 'move')"
+                                    x-on:click="if (!ignoreClick()) $dispatch('open-task-form', { taskId: {{ $task->id }} })">
+                                    @if ($task->user_id === auth()->id())
+                                        <span data-resize-edge="left"
+                                            class="absolute inset-y-0 left-0 w-2 cursor-ew-resize"
+                                            x-on:pointerdown.stop="startMonthDrag($event, {{ $task->id }}, 'left')"></span>
+                                        <span data-resize-edge="right"
+                                            class="absolute inset-y-0 right-0 w-2 cursor-ew-resize"
+                                            x-on:pointerdown.stop="startMonthDrag($event, {{ $task->id }}, 'right')"></span>
+                                    @endif
+                                    <span class="truncate">{{ $task->name }}</span>
+                                    @if ($task->timeLabel() !== null)
+                                        <span
+                                            class="ml-auto shrink-0 text-[10px] font-medium opacity-80">{{ $task->timeLabel() }}</span>
+                                    @endif
+                                </button>
+                            </div>
                         @empty
-                            <div class="p-3 text-xs text-zinc-500">表示中のタスクはありません。</div>
+                            <div class="px-5 py-12 text-center text-sm text-[#87938d]">この月に表示するタスクはありません。</div>
                         @endforelse
                     </div>
-
-                    <div class="min-w-0 flex-1 overflow-x-auto" x-ref="ganttScroller">
-                        <div class="relative min-w-max" x-ref="ganttGrid"
-                            style="width: {{ $ganttDays->count() * 48 }}px">
-                            <div
-                                class="flex h-11 border-b border-zinc-200 bg-zinc-50 text-center text-[11px] font-semibold text-zinc-500">
-                                @foreach ($ganttDays as $day)
-                                    <div class="flex w-12 shrink-0 flex-col items-center justify-center border-e border-zinc-100 {{ $day->isToday() ? 'bg-emerald-50 text-emerald-700' : ($day->isWeekend() ? 'bg-zinc-100/70' : '') }}"
-                                        data-date="{{ $day->toDateString() }}"
-                                        wire:key="gantt-day-{{ $day->toDateString() }}">
-                                        <span>{{ $day->format('n/j') }}</span>
-                                        <span
-                                            class="text-[10px] font-normal">{{ ['日', '月', '火', '水', '木', '金', '土'][$day->dayOfWeek] }}</span>
-                                    </div>
-                                @endforeach
-                            </div>
-
-                            @foreach ($this->ganttTasks as $task)
-                                @php
-                                    $visibleStart = $task->start_date->lessThan($ganttStart)
-                                        ? $ganttStart
-                                        : $task->start_date;
-                                    $visibleEnd = $task->end_date->greaterThan($ganttEnd) ? $ganttEnd : $task->end_date;
-                                    $offset = $ganttStart->diffInDays($visibleStart);
-                                    $duration = $visibleStart->diffInDays($visibleEnd) + 1;
-                                @endphp
-                                <div class="relative h-14 border-b border-zinc-100"
-                                    wire:key="gantt-row-{{ $task->id }}">
-                                    <div class="pointer-events-none absolute inset-0 flex">
-                                        @foreach ($ganttDays as $day)
-                                            <div
-                                                class="w-12 shrink-0 border-e border-zinc-100 {{ $day->isWeekend() ? 'bg-zinc-50' : '' }}">
-                                            </div>
-                                        @endforeach
-                                    </div>
-                                    <button type="button" data-gantt-bar data-task-id="{{ $task->id }}"
-                                        class="absolute top-3 flex h-8 items-center gap-2 overflow-hidden px-2 text-left text-xs font-medium text-white shadow-sm {{ $task->user_id === auth()->id() ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer' }}"
-                                        style="background-color: {{ $task->color }}; left: {{ $offset * 48 }}px; width: {{ $duration * 48 }}px"
-                                        x-on:pointerdown="startGantt($event, {{ $task->id }}, 'move')"
-                                        x-on:click="if (!ignoreClick()) $dispatch('open-task-form', { taskId: {{ $task->id }} })">
-                                        @if ($task->user_id === auth()->id())
-                                            <span data-resize-edge="left"
-                                                class="absolute inset-y-0 left-0 w-2 cursor-ew-resize"
-                                                x-on:pointerdown.stop="startGantt($event, {{ $task->id }}, 'left')"></span>
-                                            <span data-resize-edge="right"
-                                                class="absolute inset-y-0 right-0 w-2 cursor-ew-resize"
-                                                x-on:pointerdown.stop="startGantt($event, {{ $task->id }}, 'right')"></span>
-                                        @endif
-                                        <span class="truncate">{{ $task->name }}</span>
-                                        <span
-                                            class="ml-auto shrink-0 text-[10px] opacity-80">{{ $task->start_date->format('n/j') }}-{{ $task->end_date->format('n/j') }}</span>
-                                    </button>
-                                </div>
-                            @endforeach
-                        </div>
-                    </div>
                 </div>
-            </section>
-        @else
-            <section class="overflow-hidden border border-zinc-200 bg-white shadow-sm" aria-label="月間カレンダー">
-                <div class="flex items-center justify-between border-b border-zinc-200 p-3">
-                    <div class="flex items-center gap-1">
-                        <flux:button wire:click="previousMonth" variant="ghost" size="sm" icon="chevron-left"
-                            aria-label="前月" />
-                        <span
-                            class="min-w-28 text-center text-sm font-semibold tabular-nums">{{ $month->format('Y年n月') }}</span>
-                        <flux:button wire:click="nextMonth" variant="ghost" size="sm" icon="chevron-right"
-                            aria-label="翌月" />
-                    </div>
-                    <flux:button wire:click="thisMonth" size="sm">今月</flux:button>
-                </div>
-
-                <div class="overflow-x-auto">
-                    <div class="min-w-200">
-                        <div
-                            class="grid grid-cols-7 border-b border-zinc-200 bg-zinc-50 text-center text-xs font-bold text-zinc-500">
-                            @foreach (['日', '月', '火', '水', '木', '金', '土'] as $index => $weekday)
-                                <div
-                                    class="py-2.5 {{ $index === 0 ? 'text-rose-600' : ($index === 6 ? 'text-sky-600' : '') }}">
-                                    {{ $weekday }}</div>
-                            @endforeach
-                        </div>
-
-                        <div class="relative" x-ref="calendarGrid">
-                            <div class="grid grid-cols-7 gap-px bg-zinc-200/70"
-                                style="grid-template-rows: {{ implode('px ', $calendarLayout['rowHeights']) }}px">
-                                @foreach ($calendarDays as $day)
+            @elseif ($viewMode === 'week')
+                <div class="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                    @foreach ($weekDays as $day)
+                        @php
+                            $tasksForDay = $weekTasks->filter(
+                                fn($task) => $task->start_date->lessThanOrEqualTo($day) &&
+                                    $task->end_date->greaterThanOrEqualTo($day),
+                            );
+                            $isWeekend = $day->isWeekend();
+                        @endphp
+                        <section
+                            class="min-h-82.5 rounded-lg p-3 {{ $isWeekend ? 'bg-[#f8f8f4]' : 'bg-[#f4f6f2]' }} {{ $day->isToday() ? 'ring-1 ring-[#9bb9aa]' : '' }}"
+                            wire:key="week-column-{{ $day->toDateString() }}">
+                            <header class="mb-3 flex items-center justify-between border-b border-[#e4e9e3] px-1 pb-3">
+                                <span
+                                    class="text-xs font-bold {{ $day->dayOfWeek === 0 ? 'text-rose-600' : ($day->dayOfWeek === 6 ? 'text-sky-600' : 'text-[#718078]') }}">
+                                    {{ $day->format('n/j') }}　{{ $weekdayNames[$day->dayOfWeek] }}曜日
+                                </span>
+                                <button type="button" wire:click="showDay('{{ $day->toDateString() }}')"
+                                    class="grid size-8 place-items-center rounded-full text-sm font-bold {{ $day->isToday() ? 'bg-[#405d65] text-white' : 'text-[#53655d] hover:bg-white' }}"
+                                    aria-label="{{ $day->format('n月j日') }}を日表示">{{ $day->day }}</button>
+                            </header>
+                            <div class="space-y-2">
+                                @forelse ($tasksForDay as $task)
                                     <button type="button"
-                                        class="relative z-0 min-h-32 bg-white p-1.5 text-left transition hover:bg-zinc-50 {{ $day->month !== $month->month ? 'bg-zinc-50 text-zinc-400' : '' }}"
-                                        data-date="{{ $day->toDateString() }}"
-                                        wire:key="calendar-day-{{ $day->toDateString() }}"
-                                        x-on:click="$dispatch('open-task-form', { date: '{{ $day->toDateString() }}' })">
-                                    </button>
-                                @endforeach
-                            </div>
-
-                            <div class="pointer-events-none absolute inset-0 z-20 grid grid-cols-7 gap-px"
-                                style="grid-template-rows: {{ implode('px ', $calendarLayout['rowHeights']) }}px">
-                                @foreach ($calendarDays as $day)
-                                    <div class="flex items-start justify-between p-2">
+                                        wire:key="week-task-{{ $task->id }}-{{ $day->toDateString() }}"
+                                        class="w-full rounded-md border border-[#e5e9e3] bg-white p-3 text-left shadow-sm hover:border-[#b7c9bf]"
+                                        x-on:click="$dispatch('open-task-form', { taskId: {{ $task->id }} })">
+                                        <span class="mb-2 block h-1 w-8 rounded-full"
+                                            style="background-color: {{ $task->color }}"></span>
                                         <span
-                                            class="inline-flex size-6 items-center justify-center text-xs font-semibold {{ $day->isToday() ? 'rounded-full bg-emerald-600 text-white' : ($day->dayOfWeek === 0 ? 'text-rose-600' : ($day->dayOfWeek === 6 ? 'text-sky-600' : '')) }}">{{ $day->day }}</span>
-                                        @if ($day->isToday())
-                                            <span class="text-[10px] font-semibold text-emerald-700">今日</span>
+                                            class="block text-[13px] font-bold leading-5 text-[#35413a]">{{ $task->name }}</span>
+                                        <span class="mt-2 block text-[11px] font-semibold text-[#567d73]">
+                                            @if ($task->timeLabel() === null)
+                                                終日
+                                            @else
+                                                {{ ($task->start_date->lessThan($day) ? '00:00' : substr($task->start_time, 0, 5)) . ' - ' . ($task->end_date->greaterThan($day) ? '24:00' : substr($task->end_time, 0, 5)) }}
+                                                @if ($task->start_date->lessThan($day) || $task->end_date->greaterThan($day))
+                                                    · 継続
+                                                @endif
+                                            @endif
+                                        </span>
+                                        @if (count($task->assignees ?? []))
+                                            <span class="mt-2 block truncate text-[11px] text-[#87938d]">担当
+                                                {{ implode('、', $task->assignees) }}</span>
                                         @endif
-                                    </div>
-                                @endforeach
-                            </div>
-
-                            <div class="pointer-events-none absolute inset-0 z-10">
-                                @php $rowOffsets = [0]; @endphp
-                                @foreach ($calendarLayout['rowHeights'] as $height)
-                                    @php $rowOffsets[] = end($rowOffsets) + $height + 1; @endphp
-                                @endforeach
-                                @foreach ($calendarLayout['bars'] as $bar)
-                                    <button type="button" data-calendar-bar data-task-id="{{ $bar['id'] }}"
-                                        data-row="{{ $bar['row'] }}"
-                                        class="pointer-events-auto absolute flex h-6 items-center overflow-hidden rounded-sm px-2 text-left text-xs font-medium text-white shadow-sm {{ $bar['isOwner'] ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer' }}"
-                                        style="background-color: {{ $bar['color'] }}; top: {{ $rowOffsets[$bar['row']] + 36 + $bar['lane'] * 28 }}px; left: calc({{ $bar['column'] }} * (100% + 1px) / 7); width: calc({{ $bar['span'] }} * (100% + 1px) / 7 - 1px)"
-                                        wire:key="calendar-bar-{{ $bar['id'] }}-{{ $bar['row'] }}-{{ $bar['column'] }}"
-                                        x-on:pointerdown="startCalendar($event, {{ $bar['id'] }}, {{ $bar['isOwner'] ? 'true' : 'false' }})"
-                                        x-on:click.stop="if (!ignoreClick()) $dispatch('open-task-form', { taskId: {{ $bar['id'] }} })">
-                                        <span class="truncate">{{ $bar['name'] }}</span>
                                     </button>
-                                @endforeach
+                                @empty
+                                    <div
+                                        class="rounded-md border border-dashed border-[#dbe3dc] px-3 py-6 text-center text-xs text-[#9aa49e]">
+                                        予定はありません</div>
+                                @endforelse
                             </div>
+                            <button type="button"
+                                class="mt-3 w-full rounded-md border border-dashed border-[#cddad2] p-2.5 text-xs font-semibold text-[#6a8c82] hover:bg-[#edf4ef]"
+                                x-on:click="$dispatch('open-task-form', { date: '{{ $day->toDateString() }}' })">＋
+                                この日に追加</button>
+                        </section>
+                    @endforeach
+                </div>
+            @else
+                @php
+                    $allDayTasks = $dayTasks->filter(
+                        fn($task) => $task->start_time === null || $task->end_time === null,
+                    );
+                @endphp
+                <div class="grid grid-cols-[72px_minmax(480px,1fr)] border-b border-[#e8ece9]">
+                    <div class="bg-[#f8faf8] px-3 py-4 text-xs font-bold text-[#76837d]">終日</div>
+                    <div class="flex min-h-14 flex-wrap gap-2 p-2">
+                        @forelse ($allDayTasks as $task)
+                            <button type="button" wire:key="all-day-task-{{ $task->id }}"
+                                class="flex max-w-full flex-col items-start rounded-md px-3 py-2 text-left text-xs font-semibold text-[#35413a]"
+                                style="background-color: color-mix(in srgb, {{ $task->color }} 18%, white); border-inline-start: 3px solid {{ $task->color }}"
+                                x-on:click="$dispatch('open-task-form', { taskId: {{ $task->id }} })">
+                                <span class="max-w-full truncate">{{ $task->name }}</span>
+                                @if (count($task->assignees ?? []))
+                                    <span class="mt-1 max-w-full truncate text-[10px] font-medium text-[#718078]">
+                                        {{ '担当 ' . implode('、', $task->assignees) }}
+                                    </span>
+                                @endif
+                            </button>
+                        @empty
+                            <span class="py-2 text-xs text-[#a0aaa4]">終日の予定はありません</span>
+                        @endforelse
+                    </div>
+                </div>
+                <div class="max-h-180 overflow-y-auto">
+                    <div class="grid grid-cols-[72px_minmax(480px,1fr)]">
+                        <div>
+                            @foreach (range(0, 23) as $hour)
+                                <div
+                                    class="h-13 border-b border-[#edf0ed] px-2.5 py-1 text-right text-[11px] text-[#84908f]">
+                                    {{ sprintf('%02d:00', $hour) }}</div>
+                            @endforeach
+                        </div>
+                        <div class="relative" style="min-height: 1248px">
+                            @foreach (range(0, 23) as $hour)
+                                <div class="h-13 border-b border-[#edf0ed]"></div>
+                            @endforeach
+                            @foreach ($daySchedule as $scheduledTask)
+                                @php
+                                    $task = $scheduledTask['task'];
+                                    $duration = max(30, $scheduledTask['end'] - $scheduledTask['start']);
+                                    $top = ($scheduledTask['start'] / 60) * 52 + 3;
+                                    $height = max(34, ($duration / 60) * 52 - 6);
+                                    $left = ($scheduledTask['lane'] * 100) / $scheduledTask['laneCount'];
+                                    $width = 100 / $scheduledTask['laneCount'];
+                                    $startLabel = sprintf(
+                                        '%02d:%02d',
+                                        intdiv($scheduledTask['start'], 60),
+                                        $scheduledTask['start'] % 60,
+                                    );
+                                    $endLabel =
+                                        $scheduledTask['end'] === 1440
+                                            ? '24:00'
+                                            : sprintf(
+                                                '%02d:%02d',
+                                                intdiv($scheduledTask['end'], 60),
+                                                $scheduledTask['end'] % 60,
+                                            );
+                                @endphp
+                                <button type="button" wire:key="timed-task-{{ $task->id }}"
+                                    class="absolute z-2 flex items-center gap-2 overflow-hidden rounded-md px-2.5 py-1.5 text-left text-xs font-bold text-[#35413a]"
+                                    style="top: {{ $top }}px; height: {{ $height }}px; left: {{ $left }}%; width: {{ $width }}%; background-color: color-mix(in srgb, {{ $task->color }} 18%, white); border-inline-start: 3px solid {{ $task->color }}"
+                                    x-on:click="$dispatch('open-task-form', { taskId: {{ $task->id }} })">
+                                    <span
+                                        class="shrink-0 text-[10px] font-medium">{{ $startLabel . ' - ' . $endLabel }}</span>
+                                    <span class="min-w-0 flex-1 truncate">{{ $task->name }}</span>
+                                    @if (count($task->assignees ?? []))
+                                        <span class="max-w-[40%] shrink-0 truncate text-[10px] font-medium">
+                                            {{ '担当 ' . implode('、', $task->assignees) }}
+                                        </span>
+                                    @endif
+                                </button>
+                            @endforeach
                         </div>
                     </div>
                 </div>
-            </section>
-        @endif
+            @endif
+        </section>
     </div>
 
     <livewire:calendar::task-form />

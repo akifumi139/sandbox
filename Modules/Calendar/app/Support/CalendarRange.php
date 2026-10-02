@@ -11,8 +11,6 @@ final class CalendarRange
 
     private const DAYS_PER_WEEK = 7;
 
-    private const GANTT_DAYS_EACH_SIDE = 10;
-
     /** @return Collection<int, CarbonImmutable> */
     public function calendarDays(CarbonImmutable $month): Collection
     {
@@ -23,11 +21,20 @@ final class CalendarRange
     }
 
     /** @return Collection<int, CarbonImmutable> */
-    public function ganttDays(CarbonImmutable $centerDate): Collection
+    public function monthDays(CarbonImmutable $month): Collection
     {
-        $start = $centerDate->subDays(self::GANTT_DAYS_EACH_SIDE);
+        $start = $month->startOfMonth();
 
-        return collect(range(0, self::GANTT_DAYS_EACH_SIDE * 2))
+        return collect(range(0, $start->daysInMonth - 1))
+            ->map(fn (int $offset): CarbonImmutable => $start->addDays($offset));
+    }
+
+    /** @return Collection<int, CarbonImmutable> */
+    public function weekDays(CarbonImmutable $date): Collection
+    {
+        $start = $date->startOfWeek(CarbonImmutable::MONDAY);
+
+        return collect(range(0, self::DAYS_PER_WEEK - 1))
             ->map(fn (int $offset): CarbonImmutable => $start->addDays($offset));
     }
 }

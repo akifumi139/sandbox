@@ -49,6 +49,7 @@ final class CalendarLayoutBuilder
                     'span' => $span,
                     'lane' => $lane,
                     'color' => $task->color,
+                    'timeLabel' => $task->timeLabel(),
                     'isOwner' => $task->user_id === $ownerId,
                 ];
                 $index = $rowEndIndex + 1;

@@ -7,6 +7,8 @@ use Carbon\CarbonImmutable;
 use Flux\Flux;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use Livewire\Attributes\On;
 use Livewire\Component;
@@ -21,11 +23,15 @@ class TaskForm extends Component
 
     public ?int $taskId = null;
 
-    /** @var array{name: string, start_date: string, end_date: string, color: string} */
+    /** @var array{name: string, start_date: string, end_date: string, schedule_type: string, start_time: string, end_time: string, assignees: string, color: string} */
     public array $form = [
         'name' => '',
         'start_date' => '',
         'end_date' => '',
+        'schedule_type' => 'all_day',
+        'start_time' => '',
+        'end_time' => '',
+        'assignees' => '',
         'color' => '#10B981',
     ];
 
@@ -45,6 +51,10 @@ class TaskForm extends Component
                 'name' => $task->name,
                 'start_date' => $task->start_date->toDateString(),
                 'end_date' => $task->end_date->toDateString(),
+                'schedule_type' => $task->start_time === null && $task->end_time === null ? 'all_day' : 'timed',
+                'start_time' => $task->start_time === null ? '' : substr($task->start_time, 0, 5),
+                'end_time' => $task->end_time === null ? '' : substr($task->end_time, 0, 5),
+                'assignees' => implode("\n", $task->assignees ?? []),
                 'color' => $task->color,
             ];
         } else {
@@ -55,6 +65,10 @@ class TaskForm extends Component
                 'name' => '',
                 'start_date' => $taskDate,
                 'end_date' => $taskDate,
+                'schedule_type' => 'all_day',
+                'start_time' => '',
+                'end_time' => '',
+                'assignees' => '',
                 'color' => '#10B981',
             ];
         }
@@ -71,6 +85,30 @@ class TaskForm extends Component
         Gate::authorize($task === null ? 'create' : 'update', $task ?? Task::class);
 
         $validated = $this->validate();
+        $isAllDay = $validated['form']['schedule_type'] === 'all_day';
+        $assignees = collect(preg_split('/\R/u', $validated['form']['assignees'] ?? '') ?: [])
+            ->map(fn (string $assignee): string => trim($assignee))
+            ->filter()
+            ->unique()
+            ->values();
+
+        if ($assignees->count() > 10 || $assignees->contains(fn (string $assignee): bool => Str::length($assignee) > 255)) {
+            throw ValidationException::withMessages([
+                'form.assignees' => '担当者は10名以内、各255文字以内で入力してください。',
+            ]);
+        }
+
+        if (! $isAllDay) {
+            $startsAt = CarbonImmutable::parse($validated['form']['start_date'].' '.$validated['form']['start_time']);
+            $endsAt = CarbonImmutable::parse($validated['form']['end_date'].' '.$validated['form']['end_time']);
+
+            if ($endsAt->lessThanOrEqualTo($startsAt)) {
+                throw ValidationException::withMessages([
+                    'form.end_time' => '終了日時は開始日時より後にしてください。',
+                ]);
+            }
+        }
+
         $user = Auth::user();
 
         abort_unless($user instanceof User, 401);
@@ -82,6 +120,9 @@ class TaskForm extends Component
             CarbonImmutable::parse($validated['form']['end_date']),
             strtoupper($validated['form']['color']),
             $task,
+            startTime: $isAllDay ? null : $validated['form']['start_time'],
+            endTime: $isAllDay ? null : $validated['form']['end_time'],
+            assignees: $assignees->all(),
         );
 
         $this->showModal = false;
@@ -107,6 +148,10 @@ class TaskForm extends Component
             'form.name' => ['required', 'string', 'max:255'],
             'form.start_date' => ['required', 'date_format:Y-m-d'],
             'form.end_date' => ['required', 'date_format:Y-m-d', 'after_or_equal:form.start_date'],
+            'form.schedule_type' => ['required', 'in:all_day,timed'],
+            'form.start_time' => $this->form['schedule_type'] === 'timed' ? ['required', 'date_format:H:i'] : ['nullable'],
+            'form.end_time' => $this->form['schedule_type'] === 'timed' ? ['required', 'date_format:H:i'] : ['nullable'],
+            'form.assignees' => ['nullable', 'string', 'max:2570'],
             'form.color' => ['required', 'regex:/^#[0-9A-Fa-f]{6}$/'],
         ];
     }

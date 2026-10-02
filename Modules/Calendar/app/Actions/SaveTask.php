@@ -15,6 +15,9 @@ class SaveTask
         CarbonInterface $endDate,
         string $color,
         ?Task $task = null,
+        ?string $startTime = null,
+        ?string $endTime = null,
+        array $assignees = [],
     ): Task {
         $savedTask = $task ?? new Task;
 
@@ -26,6 +29,9 @@ class SaveTask
             'name' => $name,
             'start_date' => $startDate,
             'end_date' => $endDate,
+            'start_time' => $startTime,
+            'end_time' => $endTime,
+            'assignees' => $assignees,
             'color' => $color,
         ])->save();
 

@@ -19,17 +19,24 @@ use Modules\Calendar\Database\Factories\TaskFactory;
  * @property string $name
  * @property Carbon $start_date
  * @property Carbon $end_date
+ * @property string|null $start_time
+ * @property string|null $end_time
+ * @property array<int, string>|null $assignees
  * @property string $color
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property-read User $user
  */
 #[Table('calendar__tasks')]
-#[Fillable(['user_id', 'name', 'start_date', 'end_date', 'color'])]
+#[Fillable(['user_id', 'name', 'start_date', 'end_date', 'start_time', 'end_time', 'assignees', 'color'])]
 class Task extends Model
 {
     /** @use HasFactory<TaskFactory> */
     use HasFactory;
+
+    protected $attributes = [
+        'assignees' => '[]',
+    ];
 
     /** @param Builder<Task> $query */
     public function scopeOverlapping(Builder $query, CarbonInterface $start, CarbonInterface $end): Builder
@@ -45,12 +52,22 @@ class Task extends Model
         return $this->belongsTo(User::class);
     }
 
+    public function timeLabel(): ?string
+    {
+        if ($this->start_time === null || $this->end_time === null) {
+            return null;
+        }
+
+        return substr($this->start_time, 0, 5).' - '.substr($this->end_time, 0, 5);
+    }
+
     /** @return array<string, string> */
     protected function casts(): array
     {
         return [
             'start_date' => 'immutable_date',
             'end_date' => 'immutable_date',
+            'assignees' => 'array',
         ];
     }
 

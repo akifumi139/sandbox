@@ -20,7 +20,25 @@ it('stores an inclusive task date range for its creator', function (): void {
         ->and($task->start_date)->toBeInstanceOf(CarbonImmutable::class)
         ->and($task->start_date->toDateString())->toBe('2026-09-21')
         ->and($task->end_date->toDateString())->toBe('2026-09-24')
+        ->and($task->start_time)->toBeNull()
+        ->and($task->end_time)->toBeNull()
         ->and($task->color)->toBe('#F43F5E');
+});
+
+it('stores optional start and end times for a timed task', function (): void {
+    $task = app(SaveTask::class)->handle(
+        User::factory()->create(),
+        '時間指定タスク',
+        CarbonImmutable::parse('2026-09-21'),
+        CarbonImmutable::parse('2026-09-21'),
+        '#10B981',
+        startTime: '09:30',
+        endTime: '11:00',
+    );
+
+    expect($task->start_time)->toStartWith('09:30')
+        ->and($task->end_time)->toStartWith('11:00')
+        ->and($task->timeLabel())->toBe('09:30 - 11:00');
 });
 
 it('allows every user to view tasks but only the creator to modify them', function (): void {

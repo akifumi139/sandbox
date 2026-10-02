@@ -11,10 +11,18 @@ it('builds the six week calendar range from Sunday', function (): void {
         ->and($days->last()->toDateString())->toBe('2026-10-10');
 });
 
-it('builds an inclusive gantt range around the center date', function (): void {
-    $days = (new CalendarRange)->ganttDays(CarbonImmutable::parse('2026-09-30'));
+it('builds a month range containing only dates in that month', function (): void {
+    $days = (new CalendarRange)->monthDays(CarbonImmutable::parse('2026-09-18'));
 
-    expect($days)->toHaveCount(21)
-        ->and($days->first()->toDateString())->toBe('2026-09-20')
-        ->and($days->last()->toDateString())->toBe('2026-10-10');
+    expect($days)->toHaveCount(30)
+        ->and($days->first()->toDateString())->toBe('2026-09-01')
+        ->and($days->last()->toDateString())->toBe('2026-09-30');
+});
+
+it('builds a Monday-first week range including the weekend', function (): void {
+    $days = (new CalendarRange)->weekDays(CarbonImmutable::parse('2026-10-02'));
+
+    expect($days)->toHaveCount(7)
+        ->and($days->first()->toDateString())->toBe('2026-09-28')
+        ->and($days->last()->toDateString())->toBe('2026-10-04');
 });

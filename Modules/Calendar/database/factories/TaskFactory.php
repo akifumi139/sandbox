@@ -20,7 +20,10 @@ class TaskFactory extends Factory
             'name' => fake()->sentence(3),
             'start_date' => $startDate,
             'end_date' => (clone $startDate)->modify('+'.fake()->numberBetween(0, 14).' days'),
-            'color' => fake()->randomElement(['#10B981', '#0EA5E9', '#F59E0B', '#F43F5E', '#8B5CF6']),
+            'start_time' => null,
+            'end_time' => null,
+            'assignees' => [],
+            'color' => fake()->randomElement(['#10B981', '#0EA5EB', '#F59E0B', '#F43F5E', '#8B5CF6']),
         ];
     }
 }

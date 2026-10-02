@@ -5,7 +5,6 @@ namespace Modules\Calendar\Livewire;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\View\View;
 use Livewire\Attributes\Computed;
@@ -16,7 +15,6 @@ use Livewire\Component;
 use Modules\Calendar\Actions\MoveTask;
 use Modules\Calendar\Actions\ResizeTask;
 use Modules\Calendar\Models\Task;
-use Modules\Calendar\Support\CalendarLayoutBuilder;
 use Modules\Calendar\Support\CalendarRange;
 
 class TaskManager extends Component
@@ -28,7 +26,7 @@ class TaskManager extends Component
     public string $currentCenterDate = '';
 
     #[Url(as: 'view', history: true)]
-    public string $viewMode = 'calendar';
+    public string $viewMode = 'month';
 
     public function mount(): void
     {
@@ -38,53 +36,67 @@ class TaskManager extends Component
         $this->currentCenterDate = $this->currentCenterDate !== ''
             ? CarbonImmutable::parse($this->currentCenterDate)->toDateString()
             : now()->toDateString();
-        $this->viewMode = in_array($this->viewMode, ['calendar', 'gantt'], true)
-            ? $this->viewMode
-            : 'calendar';
+        $this->viewMode = match ($this->viewMode) {
+            'month', 'week', 'day' => $this->viewMode,
+            'calendar', 'gantt' => 'month',
+            default => 'month',
+        };
     }
 
-    public function previousMonth(): void
+    public function previousPeriod(): void
     {
-        $this->currentMonth = $this->month()->subMonth()->format('Y-m');
-        $this->clearCalendarData();
+        if ($this->viewMode === 'month') {
+            $month = $this->month()->subMonth();
+            $this->currentMonth = $month->format('Y-m');
+            $this->currentCenterDate = $month->toDateString();
+        } else {
+            $this->currentCenterDate = $this->viewMode === 'week'
+                ? $this->centerDate()->subWeek()->toDateString()
+                : $this->centerDate()->subDay()->toDateString();
+        }
+
+        $this->currentMonth = $this->centerDate()->format('Y-m');
+        $this->clearTaskData();
     }
 
-    public function nextMonth(): void
+    public function nextPeriod(): void
     {
-        $this->currentMonth = $this->month()->addMonth()->format('Y-m');
-        $this->clearCalendarData();
-    }
+        if ($this->viewMode === 'month') {
+            $month = $this->month()->addMonth();
+            $this->currentMonth = $month->format('Y-m');
+            $this->currentCenterDate = $month->toDateString();
+        } else {
+            $this->currentCenterDate = $this->viewMode === 'week'
+                ? $this->centerDate()->addWeek()->toDateString()
+                : $this->centerDate()->addDay()->toDateString();
+        }
 
-    public function thisMonth(): void
-    {
-        $this->currentMonth = now()->format('Y-m');
-        $this->clearCalendarData();
+        $this->currentMonth = $this->centerDate()->format('Y-m');
+        $this->clearTaskData();
     }
 
     public function today(): void
     {
+        $this->currentMonth = now()->format('Y-m');
         $this->currentCenterDate = now()->toDateString();
-        $this->clearGanttData();
+        $this->clearTaskData();
     }
 
-    public function previousGanttRange(): void
+    public function showDay(string $date): void
     {
-        $this->currentCenterDate = $this->centerDate()->subDays(7)->toDateString();
-        $this->clearGanttData();
-    }
-
-    public function nextGanttRange(): void
-    {
-        $this->currentCenterDate = $this->centerDate()->addDays(7)->toDateString();
-        $this->clearGanttData();
+        $this->currentCenterDate = CarbonImmutable::createFromFormat('!Y-m-d', $date)->toDateString();
+        $this->currentMonth = $this->centerDate()->format('Y-m');
+        $this->viewMode = 'day';
+        $this->clearTaskData();
     }
 
     #[On('task-saved')]
     #[On('task-deleted')]
     public function clearTaskData(): void
     {
-        $this->clearCalendarData();
-        $this->clearGanttData();
+        $this->clearMonthData();
+        $this->clearWeekData();
+        $this->clearDayData();
     }
 
     #[Renderless]
@@ -117,47 +129,75 @@ class TaskManager extends Component
 
     /** @return Collection<int, CarbonImmutable> */
     #[Computed]
-    public function calendarDays(): Collection
+    public function monthDays(): Collection
     {
-        return app(CalendarRange::class)->calendarDays($this->month());
+        return app(CalendarRange::class)->monthDays($this->month());
     }
 
     /** @return Collection<int, CarbonImmutable> */
     #[Computed]
-    public function ganttDays(): Collection
+    public function weekDays(): Collection
     {
-        return app(CalendarRange::class)->ganttDays($this->centerDate());
+        return app(CalendarRange::class)->weekDays($this->centerDate());
     }
 
     /** @return EloquentCollection<int, Task> */
     #[Computed]
-    public function calendarTasks(): EloquentCollection
+    public function monthTasks(): EloquentCollection
     {
-        $days = $this->calendarDays();
+        $days = $this->monthDays();
 
         return $this->tasksOverlapping($days->first(), $days->last());
     }
 
     /** @return EloquentCollection<int, Task> */
     #[Computed]
-    public function ganttTasks(): EloquentCollection
+    public function weekTasks(): EloquentCollection
     {
-        $days = $this->ganttDays();
+        $days = $this->weekDays();
 
         return $this->tasksOverlapping($days->first(), $days->last());
     }
 
-    /** @return array{bars: array<int, array<string, mixed>>, rowHeights: array<int, int>} */
+    /** @return EloquentCollection<int, Task> */
     #[Computed]
-    public function calendarLayout(): array
+    public function dayTasks(): EloquentCollection
     {
-        $ownerId = Auth::id();
+        $date = $this->centerDate();
 
-        return app(CalendarLayoutBuilder::class)->build(
-            $this->calendarTasks(),
-            $this->calendarDays(),
-            $ownerId === null ? null : (int) $ownerId,
-        );
+        return $this->tasksOverlapping($date, $date);
+    }
+
+    /** @return array<int, array{task: Task, start: int, end: int, lane: int, laneCount: int}> */
+    #[Computed]
+    public function daySchedule(): array
+    {
+        $date = $this->centerDate();
+        $laneEnds = [];
+        $scheduledTasks = $this->dayTasks()
+            ->filter(fn (Task $task): bool => $task->start_time !== null && $task->end_time !== null)
+            ->sortBy(fn (Task $task): string => $task->start_date->toDateString().' '.$task->start_time)
+            ->map(function (Task $task) use ($date, &$laneEnds): array {
+                $startTime = CarbonImmutable::parse($date->toDateString().' '.$task->start_time);
+                $endTime = CarbonImmutable::parse($date->toDateString().' '.$task->end_time);
+                $start = $task->start_date->lessThan($date) ? 0 : $startTime->hour * 60 + $startTime->minute;
+                $end = $task->end_date->greaterThan($date) ? 1440 : $endTime->hour * 60 + $endTime->minute;
+
+                $lane = 0;
+                while (isset($laneEnds[$lane]) && $laneEnds[$lane] > $start) {
+                    $lane++;
+                }
+
+                $laneEnds[$lane] = $end;
+
+                return ['task' => $task, 'start' => $start, 'end' => $end, 'lane' => $lane];
+            })
+            ->values();
+        $laneCount = max(1, count($laneEnds));
+
+        return $scheduledTasks
+            ->map(fn (array $scheduledTask): array => [...$scheduledTask, 'laneCount' => $laneCount])
+            ->all();
     }
 
     public function month(): CarbonImmutable
@@ -181,14 +221,19 @@ class TaskManager extends Component
             ->get();
     }
 
-    private function clearCalendarData(): void
+    private function clearMonthData(): void
     {
-        unset($this->calendarDays, $this->calendarTasks, $this->calendarLayout);
+        unset($this->monthDays, $this->monthTasks);
     }
 
-    private function clearGanttData(): void
+    private function clearWeekData(): void
     {
-        unset($this->ganttDays, $this->ganttTasks);
+        unset($this->weekDays, $this->weekTasks);
+    }
+
+    private function clearDayData(): void
+    {
+        unset($this->dayTasks, $this->daySchedule);
     }
 
     public function render(): View
